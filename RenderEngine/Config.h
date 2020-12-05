@@ -24,7 +24,7 @@ namespace RenderEngine {
 
 //#define MODEL_PATH "ModelData/cube.txt"
 //#define MODEL_PATH "ModelData/MyCude.obj"
-#define MODEL_PATH "ModelData/OfficialCube.obj"
+#define MODEL_PATH "ModelData/OfficialCube.obj-"
 //#define MODEL_PATH "ModelData/result.cs"
 
 #define TEXTURE_PATH "Texture/1.bmp"
