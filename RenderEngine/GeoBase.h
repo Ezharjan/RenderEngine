@@ -29,6 +29,8 @@ namespace RenderEngine {
 
 	void VertexRHWInit(CGVertex& v);
 
+	void InvertVertexRHWInit(CGVertex& v);
+
 	float GetKFactorForArcBall(float para);
 
 	void ArcBallTransform(const Vector2& pointOnScreen, Vector3& pointOnSphere);
