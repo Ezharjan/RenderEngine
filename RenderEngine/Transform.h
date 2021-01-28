@@ -19,11 +19,9 @@ namespace RenderEngine {
 
 		void Initialize(int width, int height);
 		void UpdateTransform();
-		void UpdateTransformInvert();
 		void UpdateTransformForShadowMap();
 		void ApplyTransform(Vector4& result, const Vector4& vec);
 		void ModelToWorld(Vector4& result, const Vector4& vec);
-		void WorldToModel(Vector4& result, const Vector4& vec);
 		Vector4 Homogenize(Vector4 & result, const Vector4 & vec4ToBeHomogenized);
 		Vector4  HomogenizeInvertion(Vector4 & result, const Vector4 & vec4ToBeInverted);
 		bool IsOutsideCVV(const Vector4& v);
@@ -41,8 +39,8 @@ namespace RenderEngine {
 		Matrix4f worldMatrix;
 		Matrix4f lightSpaceMatrix;
 		Matrix4f transformMatrix;
-		Matrix4f projectionMatrix;
 	private:
+		Matrix4f projectionMatrix;
 		float canvasWidth, canvasHeight; // screen
 
 

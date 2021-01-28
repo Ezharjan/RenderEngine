@@ -37,16 +37,6 @@ namespace RenderEngine {
 		transformMatrix = m * projectionMatrix;
 	}
 
-	void Transform::UpdateTransformInvert()
-	{
-		Matrix4f m = Matrix4f::getMatrixInvert(viewMatrix) * Matrix4f::getMatrixInvert(worldMatrix);
-
-		if (gRenderInPerspectiveMode) projectionMatrix = perspectiveProjectionMatrix;
-		else projectionMatrix = orthographicProjectionMatrix;
-
-		transformMatrix = Matrix4f::getMatrixInvert(projectionMatrix) * m;
-	}
-
 	void Transform::UpdateTransformForShadowMap()
 	{
 		Matrix4f m = lightSpaceMatrix * lightViewMatrix;
@@ -65,10 +55,6 @@ namespace RenderEngine {
 		result = Vector4DotMatrix4f(vec, worldMatrix);
 	}
 
-	void Transform::WorldToModel(Vector4& result, const Vector4& vec) 
-	{
-		result = Vector4DotMatrix4f(vec, Matrix4f::getMatrixInvert(worldMatrix));
-	}
 	
 	Vector4 Transform::Homogenize(Vector4& result, const Vector4& vec4ToBeHomogenized)
 	{

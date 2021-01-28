@@ -379,21 +379,6 @@ namespace RenderEngine {
 	}
 
 
-	void InvertVertexRHWInit(CGVertex& v)
-	{
-		if (v.rhw == 0.f || v.rhw - EPSILON == 0.f) {
-			$log("%%%%%%%%%%%%%%%%%%");
-		}
-
-		v.pos.setW(1/ v.rhw);
-
-		v.tex.u = v.pos.getW() * v.tex.u;
-		v.tex.v = v.pos.getW() * v.tex.v;
-		v.normal.setX(v.normal.getX() * v.pos.getW());
-		v.normal.setY(v.normal.getY() * v.pos.getW());
-		v.normal.setZ(v.normal.getZ() * v.pos.getW());
-	}
-
 	float GetKFactorForArcBall(const float para)
 	{
 		// mouse point ranges from [0, window_width - 1]

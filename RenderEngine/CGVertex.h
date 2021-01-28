@@ -14,7 +14,6 @@ namespace RenderEngine {
 		Texcoord tex;
 		Vector4 normal;
 		float rhw; // reciprocal of homogenous W 
-		Vector4 posInWorldSpace;
 	};
 #pragma pack(pop)
 

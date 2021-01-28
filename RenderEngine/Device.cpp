@@ -14,17 +14,20 @@
 #include "ModelInfos.h"
 
 
-#define __TEST
+//#define __TEST
 
 
 namespace RenderEngine {
+
+
+	//Matrix4f mmmmt;
 
 
 	static float biasDelta = 0.0013f; // experienced bias --> 0.0013f ~ 0.0011f
 
 	static float gLightPosX = 0.f;
 	static float gLightPosY = 0.f;
-	static float gLightPosZ = 10.f;
+	static float gLightPosZ = 1.f;
 	static float gDirectionalLightIntensity = 1.f;
 
 
@@ -451,36 +454,18 @@ namespace RenderEngine {
 
 	void Device::DrawTriangle(CGVertex& v1, CGVertex& v2, CGVertex& v3, const Colour** texture)
 	{
-		// Shadow detection and caculation for drawing
-		m_invertedMatrix = Matrix4f::getMatrixInvert(m_transform->perspectiveProjectionMatrix) * Matrix4f::getMatrixInvert(m_transform->viewMatrix);
-
-
-		Vector4 pos1TransformedToWorld, pos2TransformedToWorld, pos3TransformedToWorld;
-		m_transform->ModelToWorld(pos1TransformedToWorld, v1.pos);
-		m_transform->ModelToWorld(pos2TransformedToWorld, v2.pos);
-		m_transform->ModelToWorld(pos3TransformedToWorld, v3.pos);
-
-		v1.posInWorldSpace = pos1TransformedToWorld;
-		v2.posInWorldSpace = pos2TransformedToWorld;
-		v3.posInWorldSpace = pos3TransformedToWorld;
-
-		Vector4 pos1InView, pos2InView, pos3InView;
-		Vector4DotMatrix4fInDeviceContext(pos1InView, pos1TransformedToWorld, m_transform->viewMatrix);
-		Vector4DotMatrix4fInDeviceContext(pos2InView, pos2TransformedToWorld, m_transform->viewMatrix);
-		Vector4DotMatrix4fInDeviceContext(pos3InView, pos3TransformedToWorld, m_transform->viewMatrix);
-
-
-		Vector4 pos1AfterProjection, pos2AfterProjection, pos3AfterProjection;
-		Vector4DotMatrix4fInDeviceContext(pos1AfterProjection, pos1InView, m_transform->perspectiveProjectionMatrix);
-		Vector4DotMatrix4fInDeviceContext(pos2AfterProjection, pos2InView, m_transform->perspectiveProjectionMatrix);
-		Vector4DotMatrix4fInDeviceContext(pos3AfterProjection, pos3InView, m_transform->perspectiveProjectionMatrix);
-
+		Vector4 transformedVertPos1, transformedVertPos2, transformedVertPos3;
 		Vector4 transformedVertNormal1, transformedVertNormal2, transformedVertNormal3;
 
+		m_transform->ApplyTransform(transformedVertPos1, v1.pos);
+		m_transform->ApplyTransform(transformedVertPos2, v2.pos);
+		m_transform->ApplyTransform(transformedVertPos3, v3.pos);
+
+
 		// CVV Clip here, way 2 --- Clip when three point goes out together.(Way 1 is clipping when only one point is outside)
-		if (m_transform->IsOutsideCVV(pos1AfterProjection)
-			&& m_transform->IsOutsideCVV(pos2AfterProjection)
-			&& m_transform->IsOutsideCVV(pos3AfterProjection)) return;
+		if (m_transform->IsOutsideCVV(transformedVertPos1)
+			&& m_transform->IsOutsideCVV(transformedVertPos2)
+			&& m_transform->IsOutsideCVV(transformedVertPos3)) return;
 
 		m_transform->ModelToWorld(transformedVertNormal1, v1.normal);
 		m_transform->ModelToWorld(transformedVertNormal2, v2.normal);
@@ -497,12 +482,67 @@ namespace RenderEngine {
 		}
 
 		Vector4 homogenizedVertPos1, homogenizedVertPos2, homogenizedVertPos3;
+
+
 		/// Set projection transform ---> To NDC
-		m_transform->Homogenize(homogenizedVertPos1, pos1AfterProjection);
-		m_transform->Homogenize(homogenizedVertPos2, pos2AfterProjection);
-		m_transform->Homogenize(homogenizedVertPos3, pos3AfterProjection);
+		m_transform->Homogenize(homogenizedVertPos1, transformedVertPos1);
+		m_transform->Homogenize(homogenizedVertPos2, transformedVertPos2);
+		m_transform->Homogenize(homogenizedVertPos3, transformedVertPos3);
 
 
+
+		//Test here!
+#ifdef __TEST
+
+
+		Vector4 originalPosition1InWorldSpace, originalPosition2InWorldSpace, originalPosition3InWorldSpace;
+		m_transform->ModelToWorld(originalPosition1InWorldSpace, v1.pos);
+		m_transform->ModelToWorld(originalPosition2InWorldSpace, v2.pos);
+		m_transform->ModelToWorld(originalPosition3InWorldSpace, v3.pos);
+
+
+		Matrix4f wldMat = Transform::getInstance().worldMatrix;
+		Vector4 pointOnScreen1 = homogenizedVertPos1;
+		Vector4 pointOnScreen2 = homogenizedVertPos2;
+		Vector4 pointOnScreen3 = homogenizedVertPos3;
+		m_invertedMatrix = Matrix4f::getMatrixInvert(Transform::getInstance().perspectiveProjectionMatrix) * Matrix4f::getMatrixInvert(Transform::getInstance().viewMatrix);
+		Vector4 invertedHomogenizedPos1 = Transform::getInstance().HomogenizeInvertion(invertedHomogenizedPos, pointOnScreen1);
+		Vector4 invertedHomogenizedPos2 = Transform::getInstance().HomogenizeInvertion(invertedHomogenizedPos, pointOnScreen2);
+		Vector4 invertedHomogenizedPos3 = Transform::getInstance().HomogenizeInvertion(invertedHomogenizedPos, pointOnScreen3);
+		Vector4 pos1InWorldSpace, pos2InWorldSpace, pos3InWorldSpace;
+		Vector4DotMatrix4fInDeviceContext(pos1InWorldSpace, invertedHomogenizedPos1, m_invertedMatrix);
+		Vector4DotMatrix4fInDeviceContext(pos2InWorldSpace, invertedHomogenizedPos2, m_invertedMatrix);
+		Vector4DotMatrix4fInDeviceContext(pos3InWorldSpace, invertedHomogenizedPos3, m_invertedMatrix);
+
+
+		if (pos1InWorldSpace == originalPosition1InWorldSpace) 
+		{
+			$log("v1:  " << pos1InWorldSpace);
+		}
+		else
+		{
+			$log("v1 ERROR:  " << pos1InWorldSpace);
+		}
+		if (pos2InWorldSpace == originalPosition2InWorldSpace)
+		{
+			$log("v2:  " << pos2InWorldSpace);
+		}
+		else
+		{
+			$log("v2 ERROR:  " << pos2InWorldSpace);
+		}
+		if (pos2InWorldSpace == originalPosition2InWorldSpace)
+		{
+			$log("v3:  " << pos3InWorldSpace);
+		}
+		else
+		{
+			$log("v3 ERROR:  " << pos3InWorldSpace);
+		}
+		//std::cout << pos1InWorldSpace, pos2InWorldSoace << std::endl;
+		
+#endif //__TEST
+		
 		// CULL_MODE_BACK is set to 0 and m_cullMode is in initial value --> 0
 		if (m_cullMode == CULL_MODE_BACK) {
 
@@ -529,7 +569,7 @@ namespace RenderEngine {
 		}
 		else {
 			ScanLineTriangleRasterization(v1, v2, v3,
-				pos1AfterProjection, pos2AfterProjection, pos3AfterProjection,
+				transformedVertPos1, transformedVertPos2, transformedVertPos3,
 				transformedVertNormal1, transformedVertNormal2, transformedVertNormal3,
 				homogenizedVertPos1, homogenizedVertPos2, homogenizedVertPos3, texture);
 		}
@@ -595,9 +635,8 @@ namespace RenderEngine {
 
 		Transform::getInstance().worldMatrix = influencialMatrix;
 		Transform::getInstance().lightSpaceMatrix = influencialMatrix;
-		
-		//Temp closed
-		//Transform::getInstance().UpdateTransform();
+
+		Transform::getInstance().UpdateTransform();
 		Transform::getInstance().UpdateTransformForShadowMap();
 
 		Vector4 vp1(-1.f, 1.f, 1.f, 1.f);
@@ -756,18 +795,15 @@ namespace RenderEngine {
 	void Device::DrawPlaneForShadowShowing()
 	{
 		Matrix4f translationMatrix;
-		translationMatrix = Matrix4f::getTranslateMatrix(0.f, -3.25f, 0.5f);
+		translationMatrix = Matrix4f::getTranslateMatrix(0.f, -2.25f, 0.5f);
+		Matrix4f scaleMatrix;
+		scaleMatrix = Matrix4f::getScaleMatrix(translationMatrix, 10.f);
 
-		Matrix4f scaleMatrix = Matrix4f::getScaleMatrix(2.1f,2.1f,2.3f);
+		Transform::getInstance().worldMatrix = scaleMatrix;
+		Transform::getInstance().UpdateTransform();
 
-		Transform::getInstance().worldMatrix = scaleMatrix * translationMatrix;
-		
-		//Temp closed
-		//Transform::getInstance().UpdateTransform();
-
-		Transform::getInstance().lightSpaceMatrix = translationMatrix;
-		//Temp closed
-		//Transform::getInstance().UpdateTransformForShadowMap();
+		Transform::getInstance().lightSpaceMatrix = scaleMatrix;
+		Transform::getInstance().UpdateTransformForShadowMap();
 
 		Vector4 vp1(-1.f, 1.f, 1.f, 1.f);
 		Colour co1(1.0f, 0.0f, 0.0f);
@@ -819,12 +855,10 @@ namespace RenderEngine {
 		Matrix4f translateOBJFromOutside = Matrix4f::getTranslateMatrix(xDelta, yDelta, zDelta);
 		Transform::getInstance().worldMatrix = (scaleMatrix*mRot1*mRot2*mRot3*m_rotationFromOutsideInteraction*translateOBJ*translateOBJFromOutside);
 
-		////Temp closed!
-		//Transform::getInstance().UpdateTransform();
+		Transform::getInstance().UpdateTransform();
 
 		Transform::getInstance().lightSpaceMatrix = (mRot1*mRot2*mRot3*m_rotationFromOutsideInteraction*translateOBJ*translateOBJFromOutside);
-		////Temp closed!
-		//Transform::getInstance().UpdateTransformForShadowMap();
+		Transform::getInstance().UpdateTransformForShadowMap();
 
 
 		for (int i = 0; i < model.verteciesIndexVec.size(); i++)
@@ -848,51 +882,37 @@ namespace RenderEngine {
 		m_rotationFromOutsideInteraction = m_rotationFromOutsideInteraction * Matrix4f(currentRotation);
 	}
 
-
 	void Device::DrawTriangleForShadowMap(CGVertex & v1, CGVertex & v2, CGVertex & v3)
 	{
-		Vector4 pos1TransformedToLightSpace, pos2TransformedToLightSpace, pos3TransformedToLightSpace;
-		m_transform->ModelToLightSpace(pos1TransformedToLightSpace, v1.pos);
-		m_transform->ModelToLightSpace(pos2TransformedToLightSpace, v2.pos);
-		m_transform->ModelToLightSpace(pos3TransformedToLightSpace, v3.pos);
-
-		Vector4 pos1InView, pos2InView, pos3InView;
-		Vector4DotMatrix4fInDeviceContext(pos1InView, pos1TransformedToLightSpace, m_transform->lightViewMatrix);
-		Vector4DotMatrix4fInDeviceContext(pos2InView, pos2TransformedToLightSpace, m_transform->lightViewMatrix);
-		Vector4DotMatrix4fInDeviceContext(pos3InView, pos3TransformedToLightSpace, m_transform->lightViewMatrix);
-
-		Vector4 pos1AfterProjection, pos2AfterProjection, pos3AfterProjection;
-		Vector4DotMatrix4fInDeviceContext(pos1AfterProjection, pos1InView, m_transform->orthographicProjectionMatrix);
-		Vector4DotMatrix4fInDeviceContext(pos2AfterProjection, pos2InView, m_transform->orthographicProjectionMatrix);
-		Vector4DotMatrix4fInDeviceContext(pos3AfterProjection, pos3InView, m_transform->orthographicProjectionMatrix);
-
-		if (m_transform->IsOutsideCVV(pos1AfterProjection)
-			&& m_transform->IsOutsideCVV(pos2AfterProjection)
-			&& m_transform->IsOutsideCVV(pos3AfterProjection)) return;
-
-		
+		Vector4 transformedVertPos1, transformedVertPos2, transformedVertPos3;
 		Vector4 transformedVertNormal1, transformedVertNormal2, transformedVertNormal3;
+
+		m_transform->ApplyLightTransform(transformedVertPos1, v1.pos);
+		m_transform->ApplyLightTransform(transformedVertPos2, v2.pos);
+		m_transform->ApplyLightTransform(transformedVertPos3, v3.pos);
+
+		if (m_transform->IsOutsideCVV(transformedVertPos1)
+			&& m_transform->IsOutsideCVV(transformedVertPos2)
+			&& m_transform->IsOutsideCVV(transformedVertPos3)) return;
 
 		m_transform->ModelToLightSpace(transformedVertNormal1, v1.normal);
 		m_transform->ModelToLightSpace(transformedVertNormal2, v2.normal);
 		m_transform->ModelToLightSpace(transformedVertNormal3, v3.normal);
 
-
 		Vector4 homogenizedVertPos1, homogenizedVertPos2, homogenizedVertPos3;
-		
-		/// Set projection transform ---> To NDC
-		m_transform->Homogenize(homogenizedVertPos1, pos1AfterProjection);
-		m_transform->Homogenize(homogenizedVertPos2, pos2AfterProjection);
-		m_transform->Homogenize(homogenizedVertPos3, pos3AfterProjection);
+
+		/// Set projection transform
+		m_transform->Homogenize(homogenizedVertPos1, transformedVertPos1);
+		m_transform->Homogenize(homogenizedVertPos2, transformedVertPos2);
+		m_transform->Homogenize(homogenizedVertPos3, transformedVertPos3);
 
 		CGVertex t1 = v1, t2 = v2, t3 = v3;
 		t1.pos = homogenizedVertPos1; t2.pos = homogenizedVertPos2; t3.pos = homogenizedVertPos3;
 		t1.normal = transformedVertNormal1; t2.normal = transformedVertNormal2; t3.normal = transformedVertNormal3;
-		t1.pos.setW(pos1AfterProjection.getW());
-		t2.pos.setW(pos2AfterProjection.getW());
-		t3.pos.setW(pos3AfterProjection.getW());
+		t1.pos.setW(transformedVertPos1.getW());
+		t2.pos.setW(transformedVertPos2.getW());
+		t3.pos.setW(transformedVertPos3.getW());
 
-		////Temp closed
 		// init rhw to get the correct effect
 		VertexRHWInit(t1);
 		VertexRHWInit(t2);
@@ -920,7 +940,7 @@ namespace RenderEngine {
 
 				if (texture == NULL || m_showShadowBuffer)
 				{// when gaining shadow map or presenting it on screen
-					
+					// Perpective correction! ---> useless in orthographic mode
 					float w = 1.f / rhwTemp;
 
 					// uv interpolation to get the texture color
@@ -950,6 +970,7 @@ namespace RenderEngine {
 
 					if (zValue < zInBuffer)
 					{
+						// Perpective correction! ---> useless in orthographic mode
 						float w = 1.f / rhwTemp;
 
 						zInBuffer = zValue; // write into z-buffer
@@ -978,23 +999,20 @@ namespace RenderEngine {
 							}
 
 
-							//posOnScreen = Vector4((float)xIndex, (float)yIndex, zValue, w);
+							// Shadow detection and caculation for drawing
+							if (!m_invertedMatrixHasGotItsValue)
+							{
+								m_invertedMatrix = Matrix4f::getMatrixInvert(Transform::getInstance().perspectiveProjectionMatrix) * Matrix4f::getMatrixInvert(Transform::getInstance().viewMatrix);
+								m_invertedMatrixHasGotItsValue = true;
+							}
 
-							float xHere = LerpInDeviceContext(leftPoint.posInWorldSpace.getX(),rightPoint.posInWorldSpace.getX(),lerpFactor);
-							float yHere = LerpInDeviceContext(leftPoint.posInWorldSpace.getY(),rightPoint.posInWorldSpace.getY(),lerpFactor);
-							float zHere = LerpInDeviceContext(leftPoint.posInWorldSpace.getZ(),rightPoint.posInWorldSpace.getZ(),lerpFactor);
-							float wHere = LerpInDeviceContext(leftPoint.posInWorldSpace.getW(),rightPoint.posInWorldSpace.getW(),lerpFactor);
-							Vector4 vecHere(xHere, yHere, zHere,wHere);
-							Vector4 resultInLigtView;
-							Vector4DotMatrix4fInDeviceContext(resultInLigtView, vecHere, m_transform->lightViewMatrix);
-							Vector4 resultInLightSpace;
-							Vector4DotMatrix4fInDeviceContext(resultInLightSpace, resultInLigtView, m_transform->orthographicProjectionMatrix);
-							Vector4 homogenizedPos;
-							m_transform->Homogenize(homogenizedPos, resultInLightSpace);
-
-							if (homogenizedPos.getZ() - biasDelta > depthBufferFromLightPos[(yIndex+1.f) * m_width + (xIndex+2.f)])
+							posOnScreen = Vector4((float)xIndex, (float)yIndex, zValue, w);
+							invertedHomogenizedPos = Transform::getInstance().HomogenizeInvertion(invertedHomogenizedPos, posOnScreen);
+							Vector4DotMatrix4fInDeviceContext(posInWorldSpace, invertedHomogenizedPos, m_invertedMatrix);
+							Vector4DotMatrix4fInDeviceContext(lightScreenPosBeforsHomogenized, posInWorldSpace, lightSpaceMatrix);
+							posInLightScreen = Transform::getInstance().Homogenize(posInLightScreen, lightScreenPosBeforsHomogenized);
+							if (posInLightScreen.getZ() - biasDelta > depthBufferFromLightPos[yIndex * m_width + xIndex])
 								texColor *= Colour(0.3f, 0.3f, 0.3f);
-
 
 
 
@@ -1119,11 +1137,6 @@ namespace RenderEngine {
 		v.color = LerpInDeviceContext(v1.color, v2.color, t);
 		v.pos.setZ(LerpInDeviceContext(v1.pos.getZ(), v2.pos.getZ(), t));
 		v.pos.setW(LerpInDeviceContext(v1.pos.getW(), v2.pos.getW(), t));
-
-		v.posInWorldSpace.setX(LerpInDeviceContext(v1.posInWorldSpace.getX(), v2.posInWorldSpace.getX(), t));
-		v.posInWorldSpace.setY(LerpInDeviceContext(v1.posInWorldSpace.getY(), v2.posInWorldSpace.getY(), t));
-		v.posInWorldSpace.setZ(LerpInDeviceContext(v1.posInWorldSpace.getZ(), v2.posInWorldSpace.getZ(), t));
-		v.posInWorldSpace.setW(LerpInDeviceContext(v1.posInWorldSpace.getW(), v2.posInWorldSpace.getW(), t));
 	}
 
 	void Device::DrawTopTriangle(const CGVertex & p1, const CGVertex & p2, const CGVertex & p3, const Colour** texture)
@@ -1345,12 +1358,6 @@ namespace RenderEngine {
 			 * G:	  Lower the value of biasDelta;
 			 */
 
-			// Test
-			//if (Window::getInstance().IsKeyPressed(VK_F7)) {
-			//	gPrint = true;
-			//}
-			if (Window::getInstance().GetKeyUpEvent(VK_F7))
-				gPrint = true;
 			if (Window::getInstance().GetKeyUpEvent(VK_F1))
 				SetState(4);
 			if (Window::getInstance().GetKeyUpEvent(VK_F2))
@@ -1402,8 +1409,6 @@ namespace RenderEngine {
 			{
 				DrawModel(objModel, rotationAngleInDegree, translationForModel);
 				DrawPlaneForShadowShowing();
-				DrawOriginalPos();
-				DrawLightPositionAsABox(Vector3(gLightPosX, gLightPosY, gLightPosZ));
 			}
 			else
 			{
@@ -1422,137 +1427,6 @@ namespace RenderEngine {
 	void Device::CodesForTest()
 	{
 		// Place here test your codes
-	}
-
-	void Device::DrawOriginalPos()
-	{
-		Matrix4f translationMatrix;
-		translationMatrix = Matrix4f::getTranslateMatrix(0.f, 0.f, 0.f);
-		Matrix4f scaleMatrix = Matrix4f::getScaleMatrix(0.1f, 0.1f, 0.1f);
-		Matrix4f influencialMatrix = scaleMatrix * translationMatrix;
-
-		Transform::getInstance().worldMatrix = (influencialMatrix);
-
-		Transform::getInstance().UpdateTransform();
-
-		Vector4 vp1(-0.05f, 0.05f, 0.05f, 0.05f);
-		Colour co1(0.05f, 0.0f, 0.0f);
-		Vector4 nor1(-0.05f, 0.05f, -0.05f, 0.f);
-
-		Vector4 vp2(-0.05f, 0.05f, -0.05f, 0.05f);
-		Colour co2(0.0f, 0.05f, 0.0f);
-		Vector4 nor2(-0.05f, 0.05f, 0.05f, 0.f);
-
-		Vector4 vp3(0.05f, 0.05f, -0.05f, 0.05f);
-		Colour co3(0.0f, 0.0f, 0.05f);
-		Vector4 nor3(0.05f, 0.05f, 0.05f, 0.f);
-
-		Vector4 vp4(0.05f, 0.05f, 0.05f, 0.05f);
-		Colour co4(0.05f, 0.05f, 0.0f);
-		Vector4 nor4(0.05f, 0.05f, -0.05f, 0.f);
-
-		Vector4 vp5(-0.05f, -0.05f, 0.05f, 0.05f);
-		Colour co5(0.0f, 0.0f, 0.05f);
-		Vector4 nor5(-0.05f, -0.05f, -0.05f, 0.f);
-
-		Vector4 vp6(-0.05f, -0.05f, -0.05f, 0.05f);
-		Colour co6(0.05f, 0.05f, 0.0f);
-		Vector4 nor6(-0.05f, -0.05f, 0.05f, 0.f);
-
-		Vector4 vp7(0.05f, -0.05f, -0.05f, 0.05f);
-		Colour co7(0.05f, 0.0f, 0.0f);
-		Vector4 nor7(0.05f, -0.05f, 0.05f, 0.f);
-
-		Vector4 vp8(0.05f, -0.05f, 0.05f, 0.05f);
-		Colour co8(0.0f, 0.05f, 0.0f);
-		Vector4 nor8(0.05f, -0.05f, -0.05f, 0.f);
-
-
-		CGVertex vs[8] = {
-			{vp1, co1, {0.f, 0.f}, nor1, 1.f },
-			{vp2, co2, {0.f, 1.f}, nor2, 1.f },
-			{vp3, co3, {1.f, 1.f}, nor3, 1.f },
-			{vp4, co4, {0.f, 1.f}, nor4, 1.f },
-
-			{vp5, co5, {1.f, 0.f}, nor5, 1.f },
-			{vp6, co6, {0.f, 1.f}, nor6, 1.f },
-			{vp7, co7, {1.f, 1.f}, nor7, 1.f },
-			{vp8, co8, {1.f, 1.f}, nor8, 1.f },
-		};
-
-		DrawPlane(vs[6], vs[5], vs[4], vs[7]);
-		DrawPlane(vs[2], vs[1], vs[5], vs[6]);
-		DrawPlane(vs[5], vs[1], vs[0], vs[4]);
-		DrawPlane(vs[2], vs[6], vs[7], vs[3]);
-		DrawPlane(vs[7], vs[4], vs[0], vs[3]);
-		DrawPlane(vs[0], vs[1], vs[2], vs[3]);
-	}
-
-	void Device::DrawLightPositionAsABox(const Vector4 & lightPos)
-	{
-		Vector4 normalizedLightPosition = lightPos.GetNormalizedVector();
-		Matrix4f translationMatrix;
-		//translationMatrix = Matrix4f::getTranslateMatrix(normalizedLightPosition.getX(), normalizedLightPosition.getY(), normalizedLightPosition.getZ());
-		translationMatrix = Matrix4f::getTranslateMatrix(lightPos.getX(), lightPos.getY(), lightPos.getZ());
-		Matrix4f scaleMatrix = Matrix4f::getScaleMatrix(0.1f, 0.1f, 0.1f);
-		Matrix4f influencialMatrix = scaleMatrix * translationMatrix;
-
-		Transform::getInstance().worldMatrix = (influencialMatrix);
-		Transform::getInstance().lightSpaceMatrix = influencialMatrix;
-
-		Transform::getInstance().UpdateTransform();
-		Transform::getInstance().UpdateTransformForShadowMap();
-
-		Vector4 vp1(-0.05f, 0.05f, 0.05f, 0.05f);
-		Colour co1(0.05f, 0.0f, 0.0f);
-		Vector4 nor1(-0.05f, 0.05f, -0.05f, 0.f);
-
-		Vector4 vp2(-0.05f, 0.05f, -0.05f, 0.05f);
-		Colour co2(0.0f, 0.05f, 0.0f);
-		Vector4 nor2(-0.05f, 0.05f, 0.05f, 0.f);
-
-		Vector4 vp3(0.05f, 0.05f, -0.05f, 0.05f);
-		Colour co3(0.0f, 0.0f, 0.05f);
-		Vector4 nor3(0.05f, 0.05f, 0.05f, 0.f);
-
-		Vector4 vp4(0.05f, 0.05f, 0.05f, 0.05f);
-		Colour co4(0.05f, 0.05f, 0.0f);
-		Vector4 nor4(0.05f, 0.05f, -0.05f, 0.f);
-
-		Vector4 vp5(-0.05f, -0.05f, 0.05f, 0.05f);
-		Colour co5(0.0f, 0.0f, 0.05f);
-		Vector4 nor5(-0.05f, -0.05f, -0.05f, 0.f);
-
-		Vector4 vp6(-0.05f, -0.05f, -0.05f, 0.05f);
-		Colour co6(0.05f, 0.05f, 0.0f);
-		Vector4 nor6(-0.05f, -0.05f, 0.05f, 0.f);
-
-		Vector4 vp7(0.05f, -0.05f, -0.05f, 0.05f);
-		Colour co7(0.05f, 0.0f, 0.0f);
-		Vector4 nor7(0.05f, -0.05f, 0.05f, 0.f);
-
-		Vector4 vp8(0.05f, -0.05f, 0.05f, 0.05f);
-		Colour co8(0.0f, 0.05f, 0.0f);
-		Vector4 nor8(0.05f, -0.05f, -0.05f, 0.f);
-
-		CGVertex vs[8] = {
-			{vp1, co1, {0.f, 0.f}, nor1, 1.f },
-			{vp2, co2, {0.f, 1.f}, nor2, 1.f },
-			{vp3, co3, {1.f, 1.f}, nor3, 1.f },
-			{vp4, co4, {0.f, 1.f}, nor4, 1.f },
-
-			{vp5, co5, {1.f, 0.f}, nor5, 1.f },
-			{vp6, co6, {0.f, 1.f}, nor6, 1.f },
-			{vp7, co7, {1.f, 1.f}, nor7, 1.f },
-			{vp8, co8, {1.f, 1.f}, nor8, 1.f },
-		};
-
-		DrawPlane(vs[6], vs[5], vs[4], vs[7]);
-		DrawPlane(vs[2], vs[1], vs[5], vs[6]);
-		DrawPlane(vs[5], vs[1], vs[0], vs[4]);
-		DrawPlane(vs[2], vs[6], vs[7], vs[3]);
-		DrawPlane(vs[7], vs[4], vs[0], vs[3]);
-		DrawPlane(vs[0], vs[1], vs[2], vs[3]);
 	}
 }
 

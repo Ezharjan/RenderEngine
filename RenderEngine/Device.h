@@ -48,8 +48,6 @@ namespace RenderEngine {
 		void UpdateLightPosition();
 		void RenderUpdate(ModelInfo& objModel);
 		void DrawPlaneForShadowShowing();
-		void DrawOriginalPos();
-		void DrawLightPositionAsABox(const Vector4 & lightPos);
 		void Close();
 
 		
@@ -173,7 +171,5 @@ namespace RenderEngine {
 		Matrix4f lightSpaceMatrix;
 		Vector4 lightScreenPosBeforsHomogenized;
 		Vector4 posInLightScreen;
-
-		bool gPrint = false;
 	};
 }
