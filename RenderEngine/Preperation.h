@@ -10,37 +10,13 @@
 #include "CVVClip.h"
 #include "CustomizedException.h"
 
+#include "tmpGlobe.h"
 
 #ifndef __Preperation__
 #define __Preperation__
 
 
 namespace RenderEngine {
-
-	// Culling the back: as the Y-axis has been reversed after the viewport transformation, Z-axis should be reversed too
-	void BackCulling(std::vector<CGVertex> &pList)
-	{
-		for (size_t i = 0; i != pList.size(); ++i)
-		{
-			if ((i % 3 == 0) && (pList[i].IsCull == false))
-			{
-				Vector4 p1(pList[i].x, pList[i].y, pList[i].z, 1.f);
-				Vector4 p2(pList[i + 1].x, pList[i + 1].y, pList[i + 1].z, 1.f);
-				Vector4 p3(pList[i + 2].x, pList[i + 2].y, pList[i + 2].z, 1.f);
-
-				Vector4 vec1 = p2 - p1;
-				Vector4 vec2 = p3 - p1;
-				Vector4 vec3 = vec1 ^ vec2; // cross product
-
-				if (vec3.getZ() <= 0.0f)
-				{
-					pList[i].IsCull = true;
-					pList[i + 1].IsCull = true;
-					pList[i + 2].IsCull = true;
-				}
-			}
-		}
-	}
 
 
 	bool LoadModelData(std::vector<CGVertex>& verts, const std::string& ModelFileName)
@@ -78,22 +54,20 @@ namespace RenderEngine {
 					{
 						++vertexCount;
 						std::vector<std::string> currentLine = MakeLineAnArray(*it);
-						Vector3 currentVertex(StringToNum<float>(currentLine.at(1)), StringToNum<float>(currentLine.at(2)), StringToNum<float>(currentLine.at(3)));
+						Vector3 currentVertex(StringToNum(currentLine.at(1)), StringToNum(currentLine.at(2)), StringToNum(currentLine.at(3)));
 						vertices.push_back(currentVertex);
 					}
 					else if (word == "vn")
 					{
 						std::vector<std::string> currentLine = MakeLineAnArray(*it);
-						Vector3 currentNorm(StringToNum<float>(currentLine.at(1)), StringToNum<float>(currentLine.at(2)), StringToNum<float>(currentLine.at(3)));
+						Vector3 currentNorm(StringToNum(currentLine.at(1)), StringToNum(currentLine.at(2)), StringToNum(currentLine.at(3)));
 						normals.push_back(currentNorm);
 					}
 					else if (word == "vt")
 					{
 						++uvCount;
 						std::vector<std::string> currentLine = MakeLineAnArray(*it);
-						Vector2 currentUV;
-						currentUV.x = StringToNum<float>(currentLine.at(1));
-						currentUV.y = StringToNum<float>(currentLine.at(2));
+						Vector2 currentUV(StringToNum(currentLine.at(1)), StringToNum(currentLine.at(2)));
 						uvs.push_back(currentUV);
 					}
 					else if (word == "f")
@@ -108,7 +82,7 @@ namespace RenderEngine {
 						{
 							for (int i = 1; i < currentLine.size(); i++)
 							{
-								pointIndex.push_back(StringToNum<int>(currentLine.at(i)));
+								pointIndex.push_back((int)StringToNum(currentLine.at(i)));
 							}
 						}
 					}
@@ -342,8 +316,8 @@ namespace RenderEngine {
 			// Set UVs
 			if (i % polygons == 0)
 			{
-				m_vert[i].u = uvs.at(0).x;
-				m_vert[i].v = uvs.at(0).y;
+				m_vert[i].u = uvs.at(0).getX();
+				m_vert[i].v = uvs.at(0).getY();
 
 				m_vert[i].r = 255;
 				m_vert[i].g = 0;
@@ -351,8 +325,8 @@ namespace RenderEngine {
 			}
 			else if (i % polygons == uvCount - 3 || i % polygons == uvCount)
 			{
-				m_vert[i].u = uvs.at(uvCount - 3).x;
-				m_vert[i].v = uvs.at(uvCount - 3).y;
+				m_vert[i].u = uvs.at(uvCount - 3).getX();
+				m_vert[i].v = uvs.at(uvCount - 3).getY();
 
 				m_vert[i].r = 0;
 				m_vert[i].g = 255;
@@ -360,8 +334,8 @@ namespace RenderEngine {
 			}
 			else if (i % polygons == uvCount - uvCount / 2 || i % polygons == uvCount - 1)
 			{
-				m_vert[i].u = uvs.at(uvCount - uvCount / 2).x;
-				m_vert[i].v = uvs.at(uvCount - uvCount / 2).y;
+				m_vert[i].u = uvs.at(uvCount - uvCount / 2).getX();
+				m_vert[i].v = uvs.at(uvCount - uvCount / 2).getY();
 
 				m_vert[i].r = 0;
 				m_vert[i].g = 0;
@@ -369,8 +343,8 @@ namespace RenderEngine {
 			}
 			else if (i % polygons == uvCount + 1)
 			{
-				m_vert[i].u = uvs.at(uvCount - 1).x;
-				m_vert[i].v = uvs.at(uvCount - 1).y;
+				m_vert[i].u = uvs.at(uvCount - 1).getX();
+				m_vert[i].v = uvs.at(uvCount - 1).getY();
 
 				m_vert[i].r = 122;
 				m_vert[i].g = 122;
@@ -411,175 +385,174 @@ namespace RenderEngine {
 		return true;
 	}
 
-	// 从外部加载数据，解析集合体数据
-	bool  OriginalVersion_LoadModelData(std::vector<CGVertex>& PList, const std::string& ModelFileName)
-	{
-		std::ifstream in(ModelFileName);
+	//bool  OriginalVersion_LoadModelData(std::vector<CGVertex>& PList, const std::string& ModelFileName)
+	//{
+	//	std::ifstream in(ModelFileName);
 
-		// line代表文件里的一整行，包含空格，字符等； 而word代表文件里的一个单词，无空格存在。
-		std::string line, word;
+	//	// line代表文件里的一整行，包含空格，字符等； 而word代表文件里的一个单词，无空格存在。
+	//	std::string line, word;
 
-		int mVertexCount;
+	//	int mVertexCount;
 
-		// 首先在第一行读取出顶点数(这里顶点数每三个就是一个三角形)
-		std::getline(in, line);
+	//	// 首先在第一行读取出顶点数(这里顶点数每三个就是一个三角形)
+	//	std::getline(in, line);
 
-		std::istringstream record(line);
-		for (int i = 0; i < 3; ++i)
-		{
-			record >> word;
-		}
+	//	std::istringstream record(line);
+	//	for (int i = 0; i < 3; ++i)
+	//	{
+	//		record >> word;
+	//	}
 
-		// 顶点数量
-		mVertexCount = atoi(&word[0]);
+	//	// 顶点数量
+	//	mVertexCount = atoi(&word[0]);
 
-		// 跳出“Data:”这一行
-		getline(in, line);
+	//	// 跳出“Data:”这一行
+	//	getline(in, line);
 
-		// 读取真正的顶点数据
-		for (int i = 0; i < mVertexCount; ++i)
-		{
-			getline(in, line);
-			std::istringstream record(line);
+	//	// 读取真正的顶点数据
+	//	for (int i = 0; i < mVertexCount; ++i)
+	//	{
+	//		getline(in, line);
+	//		std::istringstream record(line);
 
-			CGVertex pMem;
-			pMem.w = 1.0f;
+	//		CGVertex pMem;
+	//		pMem.w = 1.0f;
 
-			//x
-			record >> word;
-			pMem.x = atof(&word[0]);
+	//		//x
+	//		record >> word;
+	//		pMem.x = atof(&word[0]);
 
-			//y
-			record >> word;
-			pMem.y = atof(&word[0]);
+	//		//y
+	//		record >> word;
+	//		pMem.y = atof(&word[0]);
 
-			//z
-			record >> word;
-			pMem.z = atof(&word[0]);
+	//		//z
+	//		record >> word;
+	//		pMem.z = atof(&word[0]);
 
-			//u
-			record >> word;
-			pMem.u = atof(&word[0]);
+	//		//u
+	//		record >> word;
+	//		pMem.u = atof(&word[0]);
 
-			//v
-			record >> word;
-			pMem.v = atof(&word[0]);
+	//		//v
+	//		record >> word;
+	//		pMem.v = atof(&word[0]);
 
-			//nx
-			record >> word;
-			pMem.nx = atof(&word[0]);
+	//		//nx
+	//		record >> word;
+	//		pMem.nx = atof(&word[0]);
 
-			//ny
-			record >> word;
-			pMem.ny = atof(&word[0]);
+	//		//ny
+	//		record >> word;
+	//		pMem.ny = atof(&word[0]);
 
-			//nz
-			record >> word;
-			pMem.nz = atof(&word[0]);
+	//		//nz
+	//		record >> word;
+	//		pMem.nz = atof(&word[0]);
 
-			// 这里每个三角面(每三个顶点)的第一个顶点的颜色是红色，或者是蓝色，代表其所绘制的面的颜色
-			if (i % 6 == 0)
-			{
-				pMem.r = 255;
-				pMem.g = 0;
-				pMem.b = 0;
+	//		// 这里每个三角面(每三个顶点)的第一个顶点的颜色是红色，或者是蓝色，代表其所绘制的面的颜色
+	//		if (i % 6 == 0)
+	//		{
+	//			pMem.r = 255;
+	//			pMem.g = 0;
+	//			pMem.b = 0;
 
-			}
-			else if (i % 6 == 1)
-			{
-				pMem.r = 0;
-				pMem.g = 255;
-				pMem.b = 0;
-			}
-			else if (i % 6 == 2)
-			{
-				pMem.r = 0;
-				pMem.g = 0;
-				pMem.b = 255;
-			}
-			else if (i % 6 == 3)
-			{
-				pMem.r = 0;
-				pMem.g = 0;
-				pMem.b = 255;
-			}
-			else if (i % 6 == 4)
-			{
-				pMem.r = 0;
-				pMem.g = 255;
-				pMem.b = 0;
-			}
-			else if (i % 6 == 5)
-			{
-				pMem.r = 255;
-				pMem.g = 0;
-				pMem.b = 0;
-			}
-			PList.push_back(pMem);
-		}
+	//		}
+	//		else if (i % 6 == 1)
+	//		{
+	//			pMem.r = 0;
+	//			pMem.g = 255;
+	//			pMem.b = 0;
+	//		}
+	//		else if (i % 6 == 2)
+	//		{
+	//			pMem.r = 0;
+	//			pMem.g = 0;
+	//			pMem.b = 255;
+	//		}
+	//		else if (i % 6 == 3)
+	//		{
+	//			pMem.r = 0;
+	//			pMem.g = 0;
+	//			pMem.b = 255;
+	//		}
+	//		else if (i % 6 == 4)
+	//		{
+	//			pMem.r = 0;
+	//			pMem.g = 255;
+	//			pMem.b = 0;
+	//		}
+	//		else if (i % 6 == 5)
+	//		{
+	//			pMem.r = 255;
+	//			pMem.g = 0;
+	//			pMem.b = 0;
+	//		}
+	//		PList.push_back(pMem);
+	//	}
 
-		return  true;
-	}
-
-
-	// 使用原生的方法从外部加载BMP位图数据，解析纹理贴图
-	void LoadTextureData(const char* TexureFilename)
-	{
-		// 检测是否是BMP文件，如果不是，就抛出FormatNotSupported异常
-		// 不使用文件后缀而是通过检测BMT文件内部数据结构来查验是否为BMP文件
+	//	return  true;
+	//}
 
 
-		char *buf;                                //定义文件读取缓冲区
-		char *p;
-		int r, g, b, pix;
+	//// 使用原生的方法从外部加载BMP位图数据，解析纹理贴图
+	//void LoadTextureData(const char* TexureFilename)
+	//{
+	//	// 检测是否是BMP文件，如果不是，就抛出FormatNotSupported异常
+	//	// 不使用文件后缀而是通过检测BMT文件内部数据结构来查验是否为BMP文件
 
-		FILE *fp;                                 //定义文件指针
-		FILE *fpw;                                //定义保存文件指针
-		//DWORD w, h;                             //定义读取图像的长和宽
-		DWORD bitCorlorUsed;                      //定义
-		DWORD bitSize;                            //定义图像的大小
-		BITMAPFILEHEADER bf;                      //图像文件头
-		BITMAPINFOHEADER bi;                      //图像文件头信息
 
-		fp = fopen(TexureFilename, "rb");
-		if (fp == NULL)
-		{
-			throw new FileNotFoundException();
-		}
+	//	char *buf;                                //定义文件读取缓冲区
+	//	char *p;
+	//	int r, g, b, pix;
 
-		fread(&bf, sizeof(BITMAPFILEHEADER), 1, fp);//读取BMP文件头文件
-		fread(&bi, sizeof(BITMAPINFOHEADER), 1, fp);//读取BMP文件头文件信息
-		textureWidth = bi.biWidth;                            //获取图像的宽
-		textureHeight = bi.biHeight;                           //获取图像的高
-		bitSize = bi.biSizeImage;                  //获取图像的size
-		buf = (char*)malloc(textureWidth*textureHeight * 3);                //分配缓冲区大小
-		fseek(fp, long(sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER)), 0);//定位到像素起始位置
-		fread(buf, 1, textureWidth*textureHeight * 3, fp);                   //开始读取数据
+	//	FILE *fp;                                 //定义文件指针
+	//	FILE *fpw;                                //定义保存文件指针
+	//	//DWORD w, h;                             //定义读取图像的长和宽
+	//	DWORD bitCorlorUsed;                      //定义
+	//	DWORD bitSize;                            //定义图像的大小
+	//	BITMAPFILEHEADER bf;                      //图像文件头
+	//	BITMAPINFOHEADER bi;                      //图像文件头信息
 
-		// 测试
-		std::cout << textureWidth << std::endl;
-		std::cout << textureHeight << std::endl;
+	//	fp = fopen(TexureFilename, "rb");
+	//	if (fp == NULL)
+	//	{
+	//		throw new FileNotFoundException();
+	//	}
 
-		// 创建纹理缓存,screen_h*screen_w * 3个字节大
-		TextureBuffer = new BYTE[textureHeight*textureWidth * 3];
+	//	fread(&bf, sizeof(BITMAPFILEHEADER), 1, fp);//读取BMP文件头文件
+	//	fread(&bi, sizeof(BITMAPINFOHEADER), 1, fp);//读取BMP文件头文件信息
+	//	textureWidth = bi.biWidth;                            //获取图像的宽
+	//	textureHeight = bi.biHeight;                           //获取图像的高
+	//	bitSize = bi.biSizeImage;                  //获取图像的size
+	//	buf = (char*)malloc(textureWidth*textureHeight * 3);                //分配缓冲区大小
+	//	fseek(fp, long(sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER)), 0);//定位到像素起始位置
+	//	fread(buf, 1, textureWidth*textureHeight * 3, fp);                   //开始读取数据
 
-		p = buf;
-		for (int j = 0; j < textureHeight; j++)
-		{
-			for (int i = 0; i < textureWidth; i++)
-			{
-				b = *p++; g = *p++; r = *p++;
-				pix = RGB(r, g, b); // 这里的pix可以直接拿去使用，当然，本文中暂且不用
+	//	// 测试
+	//	std::cout << textureWidth << std::endl;
+	//	std::cout << textureHeight << std::endl;
 
-				// 将像素的颜色输入纹理缓存,注意颜色的顺序应该是BGR
-				TextureBuffer[i * textureWidth * 3 + (j + 1) * 3 - 1] = r;
-				TextureBuffer[i * textureWidth * 3 + (j + 1) * 3 - 2] = g;
-				TextureBuffer[i * textureWidth * 3 + (j + 1) * 3 - 3] = b;
-			}
-		}
+	//	// 创建纹理缓存,screen_h*screen_w * 3个字节大
+	//	TextureBuffer = new BYTE[textureHeight*textureWidth * 3];
 
-		fclose(fp);
-	}
+	//	p = buf;
+	//	for (int j = 0; j < textureHeight; j++)
+	//	{
+	//		for (int i = 0; i < textureWidth; i++)
+	//		{
+	//			b = *p++; g = *p++; r = *p++;
+	//			pix = RGB(r, g, b); // 这里的pix可以直接拿去使用，当然，本文中暂且不用
+
+	//			// 将像素的颜色输入纹理缓存,注意颜色的顺序应该是BGR
+	//			TextureBuffer[i * textureWidth * 3 + (j + 1) * 3 - 1] = r;
+	//			TextureBuffer[i * textureWidth * 3 + (j + 1) * 3 - 2] = g;
+	//			TextureBuffer[i * textureWidth * 3 + (j + 1) * 3 - 3] = b;
+	//		}
+	//	}
+
+	//	fclose(fp);
+	//}
 }
 
 #endif // !__Preperation__

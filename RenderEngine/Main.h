@@ -40,7 +40,7 @@ namespace RenderEngine {
 	void UpdateScene(void(*callback)(short x, short y,short z),short x,short y,short z = 0);
 
 	// 渲染函数
-	void Render(RenderEngine::DisplayMode mode);
+	//void Render(RenderEngine::DisplayMode mode);
 
 	// 以线框模式在渲染
 	void RenderInWireFrameMode(byte r, byte g, byte b);

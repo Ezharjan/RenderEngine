@@ -1,1 +1,0 @@
-rename obj extension to get rid of '-' if you want to open it in other 3D viewer tools.

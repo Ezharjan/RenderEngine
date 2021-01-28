@@ -4,14 +4,9 @@
 #include<iostream>
 #include<tchar.h>
 
-
-
-#ifndef __DEBUG_HELPER__
-#define __DEBUG_HELPER__
-
 namespace DesktopCPPDebugger {
 
-	// 建立输出控制台，有助于调试与排错
+	// 建立输出控制台，有助于调试与排错，方法一
 	void UseCosoleBoard() {
 		//----begin console output
 		//----create console
@@ -38,6 +33,13 @@ namespace DesktopCPPDebugger {
 		}
 		//----end console output
 	}
-}
 
-#endif // !__DEBUG_HELPER__
+
+
+	// 建立输出控制台，有助于调试与排错，方法二
+	void UseSimpleConsoleBorad() {
+		if (AllocConsole()) {
+			freopen("CONOUT$", "w", stdout);
+		}
+	}
+}
