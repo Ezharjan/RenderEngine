@@ -43,7 +43,7 @@ namespace RenderEngine {
 		bool operator ==(const Matrix4f& right) const;
 		bool operator ==(const float right) const;
 		template<typename T>
-		bool operator !=(const T& right) const ;
+		bool operator !=(const T& right) const;
 		Matrix4f operator =(const Matrix4f& right);
 		Matrix4f operator *(const Matrix4f& right) const;
 		Matrix4f operator /(const float right) const;

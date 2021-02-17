@@ -595,7 +595,7 @@ namespace RenderEngine {
 
 		Transform::getInstance().worldMatrix = influencialMatrix;
 		Transform::getInstance().lightSpaceMatrix = influencialMatrix;
-		
+
 		//Temp closed
 		//Transform::getInstance().UpdateTransform();
 		Transform::getInstance().UpdateTransformForShadowMap();
@@ -758,10 +758,10 @@ namespace RenderEngine {
 		Matrix4f translationMatrix;
 		translationMatrix = Matrix4f::getTranslateMatrix(0.f, -3.25f, 0.5f);
 
-		Matrix4f scaleMatrix = Matrix4f::getScaleMatrix(2.1f,2.1f,2.3f);
+		Matrix4f scaleMatrix = Matrix4f::getScaleMatrix(2.1f, 2.1f, 2.3f);
 
 		Transform::getInstance().worldMatrix = scaleMatrix * translationMatrix;
-		
+
 		//Temp closed
 		//Transform::getInstance().UpdateTransform();
 
@@ -870,7 +870,7 @@ namespace RenderEngine {
 			&& m_transform->IsOutsideCVV(pos2AfterProjection)
 			&& m_transform->IsOutsideCVV(pos3AfterProjection)) return;
 
-		
+
 		Vector4 transformedVertNormal1, transformedVertNormal2, transformedVertNormal3;
 
 		m_transform->ModelToLightSpace(transformedVertNormal1, v1.normal);
@@ -879,7 +879,7 @@ namespace RenderEngine {
 
 
 		Vector4 homogenizedVertPos1, homogenizedVertPos2, homogenizedVertPos3;
-		
+
 		/// Set projection transform ---> To NDC
 		m_transform->Homogenize(homogenizedVertPos1, pos1AfterProjection);
 		m_transform->Homogenize(homogenizedVertPos2, pos2AfterProjection);
@@ -920,7 +920,7 @@ namespace RenderEngine {
 
 				if (texture == NULL || m_showShadowBuffer)
 				{// when gaining shadow map or presenting it on screen
-					
+
 					float w = 1.f / rhwTemp;
 
 					// uv interpolation to get the texture color
@@ -980,22 +980,21 @@ namespace RenderEngine {
 
 							//posOnScreen = Vector4((float)xIndex, (float)yIndex, zValue, w);
 
-							float xHere = LerpInDeviceContext(leftPoint.posInWorldSpace.getX(),rightPoint.posInWorldSpace.getX(),lerpFactor);
-							float yHere = LerpInDeviceContext(leftPoint.posInWorldSpace.getY(),rightPoint.posInWorldSpace.getY(),lerpFactor);
-							float zHere = LerpInDeviceContext(leftPoint.posInWorldSpace.getZ(),rightPoint.posInWorldSpace.getZ(),lerpFactor);
-							float wHere = LerpInDeviceContext(leftPoint.posInWorldSpace.getW(),rightPoint.posInWorldSpace.getW(),lerpFactor);
-							Vector4 vecHere(xHere, yHere, zHere,wHere);
+							float xHere = LerpInDeviceContext(leftPoint.posInWorldSpace.getX(), rightPoint.posInWorldSpace.getX(), lerpFactor);
+							float yHere = LerpInDeviceContext(leftPoint.posInWorldSpace.getY(), rightPoint.posInWorldSpace.getY(), lerpFactor);
+							float zHere = LerpInDeviceContext(leftPoint.posInWorldSpace.getZ(), rightPoint.posInWorldSpace.getZ(), lerpFactor);
+							float wHere = LerpInDeviceContext(leftPoint.posInWorldSpace.getW(), rightPoint.posInWorldSpace.getW(), lerpFactor);
+							Vector4 lerpedPoint(xHere, yHere, zHere, wHere);
 							Vector4 resultInLigtView;
-							Vector4DotMatrix4fInDeviceContext(resultInLigtView, vecHere, m_transform->lightViewMatrix);
+							Vector4DotMatrix4fInDeviceContext(resultInLigtView, lerpedPoint, m_transform->lightViewMatrix);
 							Vector4 resultInLightSpace;
 							Vector4DotMatrix4fInDeviceContext(resultInLightSpace, resultInLigtView, m_transform->orthographicProjectionMatrix);
+							//Vector4DotMatrix4fInDeviceContext(resultInLightSpace, lerpedPoint, m_transform->lightSpaceMatrix); ---> error
 							Vector4 homogenizedPos;
 							m_transform->Homogenize(homogenizedPos, resultInLightSpace);
 
-							if (homogenizedPos.getZ() - biasDelta > depthBufferFromLightPos[(yIndex+1.f) * m_width + (xIndex+2.f)])
+							if (homogenizedPos.getZ() - biasDelta > depthBufferFromLightPos[(yIndex + 1.f) * m_width + (xIndex + 2.f)])
 								texColor *= Colour(0.3f, 0.3f, 0.3f);
-
-
 
 
 							m_framebuffer[yIndex][xIndex] = GetHEXColor(vertexColor * texColor);
@@ -1345,10 +1344,10 @@ namespace RenderEngine {
 			 * G:	  Lower the value of biasDelta;
 			 */
 
-			// Test
-			//if (Window::getInstance().IsKeyPressed(VK_F7)) {
-			//	gPrint = true;
-			//}
+			 // Test
+			 //if (Window::getInstance().IsKeyPressed(VK_F7)) {
+			 //	gPrint = true;
+			 //}
 			if (Window::getInstance().GetKeyUpEvent(VK_F7))
 				gPrint = true;
 			if (Window::getInstance().GetKeyUpEvent(VK_F1))
@@ -1365,7 +1364,7 @@ namespace RenderEngine {
 				SetState(1);
 
 			if (Window::getInstance().GetKeyUpEvent(VK_J))
-				ChangeInterp(); 
+				ChangeInterp();
 			if (Window::getInstance().GetKeyUpEvent(VK_K))
 				ChangeCullMode();
 			if (Window::getInstance().GetKeyUpEvent(VK_L))
@@ -1390,7 +1389,7 @@ namespace RenderEngine {
 				biasDelta -= 0.00001f;
 				$log(biasDelta);
 			}
-			if (Window::getInstance().IsKeyPressed(VK_H)) 
+			if (Window::getInstance().IsKeyPressed(VK_H))
 			{
 				biasDelta += 0.00001f;
 				$log(biasDelta);

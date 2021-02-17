@@ -256,7 +256,7 @@ namespace RenderEngine {
 		this->setZ(this->getZ() / length);
 	}
 
-	Vector4 Vector4::GetNormalizedVector() const 
+	Vector4 Vector4::GetNormalizedVector() const
 	{
 		Vector4 result;
 		float length = sqrtf(powf(this->getX(), 2) + powf(this->getY(), 2) + powf(this->getZ(), 2));

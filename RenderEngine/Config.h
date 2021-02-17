@@ -16,7 +16,7 @@ namespace RenderEngine {
 #define WINDOW_HEIGHT 576
 #endif // !WINDOW_HEIGHT
 
-// Relevant position of window on screen
+	// Relevant position of window on screen
 #ifndef AT_SCREEN_POS_X
 #define AT_SCREEN_POS_X 400
 #endif // !AT_SCREEN_POS_X

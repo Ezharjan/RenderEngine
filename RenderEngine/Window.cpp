@@ -38,7 +38,7 @@ namespace RenderEngine {
 
 		case WM_LBUTTONDOWN:
 			// left mouse button is clicked
-	
+
 			lastPointV2.setX(LOWORD(lParam));
 			lastPointV2.setY(HIWORD(lParam));
 			break;
@@ -55,7 +55,7 @@ namespace RenderEngine {
 			else if (wParam & MK_RBUTTON)
 			{
 				// right button of the mouse pressed and moved
-				
+
 				Device::getInstance().UpdateLightSpaceMatrix(); // Observer Pattern
 				Device::getInstance().UpdateLightPosition(); // Observer Pattern
 

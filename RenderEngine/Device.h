@@ -52,7 +52,7 @@ namespace RenderEngine {
 		void DrawLightPositionAsABox(const Vector4 & lightPos);
 		void Close();
 
-		
+
 		float theta;
 		float phi = 90.f; // magic number for initialized light position on sphere
 

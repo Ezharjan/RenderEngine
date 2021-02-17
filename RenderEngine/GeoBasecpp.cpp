@@ -385,7 +385,7 @@ namespace RenderEngine {
 			$log("%%%%%%%%%%%%%%%%%%");
 		}
 
-		v.pos.setW(1/ v.rhw);
+		v.pos.setW(1 / v.rhw);
 
 		v.tex.u = v.pos.getW() * v.tex.u;
 		v.tex.v = v.pos.getW() * v.tex.v;

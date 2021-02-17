@@ -21,18 +21,18 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	RenderEngine::LoadBmp(TEXTURE_PATH_4_SHADOWPLANE, RenderEngine::Device::getInstance().pixelColorData4ShadowPlane, RenderEngine::Device::getInstance().textureWidth, RenderEngine::Device::getInstance().textureHeight);
 	RenderEngine::LoadBmp(TEXTURE_PATH, RenderEngine::Device::getInstance().pixelColorData, RenderEngine::Device::getInstance().textureWidth, RenderEngine::Device::getInstance().textureHeight);
 
-	
+
 	unsigned int* wndFramebuffer = (unsigned int*)(RenderEngine::Window::getInstance().GetFrameBuffer());
 	RenderEngine::Device::getInstance().Initialize(WINDOW_WIDTH, WINDOW_HEIGHT, wndFramebuffer, &RenderEngine::Transform::getInstance());
 	RenderEngine::Device::getInstance().SetState(4);
-	
+
 	RenderEngine::Transform::getInstance().Initialize(WINDOW_WIDTH, WINDOW_HEIGHT);
 
 	int vertSize, faceSize;
 	RenderEngine::CGVertex* vertecies;
 	RenderEngine::Face* faces;
 	RenderEngine::LoadMesh(MODEL_PATH, vertecies, vertSize, faces, faceSize);
-	
+
 	RenderEngine::ModelInfo objModel;
 	RenderEngine::ReadOBJFileIntoOBJModel(MODEL_PATH, &objModel);
 

@@ -65,11 +65,11 @@ namespace RenderEngine {
 		result = Vector4DotMatrix4f(vec, worldMatrix);
 	}
 
-	void Transform::WorldToModel(Vector4& result, const Vector4& vec) 
+	void Transform::WorldToModel(Vector4& result, const Vector4& vec)
 	{
 		result = Vector4DotMatrix4f(vec, Matrix4f::getMatrixInvert(worldMatrix));
 	}
-	
+
 	Vector4 Transform::Homogenize(Vector4& result, const Vector4& vec4ToBeHomogenized)
 	{
 		if (vec4ToBeHomogenized.getW() == 0.f) {
@@ -90,7 +90,7 @@ namespace RenderEngine {
 		}
 
 		float rhw = 1.f / vec4ToBeInverted.getW();
-		
+
 		float reciprocalOfCanvasHeight = 1.f / canvasHeight;
 		float reciprocalOfCanvasWidth = 1.f / canvasWidth;
 
