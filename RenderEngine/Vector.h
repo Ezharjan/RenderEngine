@@ -61,6 +61,8 @@ namespace RenderEngine {
 		Vector3 operator -(const Vector3& right)const;
 		Vector3 operator *(const float k)const;
 		float operator *(const Vector3& right)const;
+		Vector3 operator /(const float k)const;
+	
 		template<typename T>
 		Vector3 operator *(const T& right) const;
 		Vector3 operator ^(const Vector3& right)const; // vector cross product

@@ -143,6 +143,7 @@
     <ClInclude Include="LoadInAdvance.h" />
     <ClInclude Include="ModelInfos.h" />
     <ClInclude Include="Textcoord.h" />
+    <ClInclude Include="Uniform.h" />
     <ClInclude Include="Window.h" />
     <ClInclude Include="Transform.h" />
     <ClInclude Include="Vector.h" />

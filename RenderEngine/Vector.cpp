@@ -98,6 +98,13 @@ namespace RenderEngine {
 		return (this->getX()*right.getX() + this->getY()*right.getY() + this->getZ()*right.getZ());
 	}
 
+	Vector3 Vector3::operator/(const float k) const
+	{
+		float reciprocalK = 1 / k;
+		Vector3 result(this->getX()*reciprocalK, this->getY()*reciprocalK, this->getZ() *reciprocalK);
+		return result;
+	}
+
 	template<typename T>
 	Vector3 Vector3::operator*(const T& right) const
 	{

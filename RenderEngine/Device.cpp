@@ -902,6 +902,90 @@ namespace RenderEngine {
 	}
 
 
+	void Device::ScanlineFill(const Uniform& A, const Uniform& B, int y)
+	{
+		Vector4 worldpos_A = A.worldPos;
+		Vector4 worldpos_B = B.worldPos;
+
+		Vector4 campos_A = A.cameraScreenPos;
+		Vector4 campos_B = B.cameraScreenPos;
+
+		Colour color_A = A.color;
+		Colour color_B = B.color;
+
+		Vector3 texture_A = A.texcoord;
+		Vector3 texture_B = B.texcoord;
+
+		Vector4 normal_A = A.normal;
+		Vector4 normal_B = B.normal;
+
+		//zbuffer caculation
+		float scanline_depth = campos_B.getZ() - campos_A.getZ();
+		float scanline_width = campos_B.getX() - campos_A.getX();
+		float depth_ratio = scanline_depth / scanline_width;
+		float *z_line_buffer = &m_zbuffer[y];
+
+		//w caculation
+		float w_diff = campos_B.getW() - campos_A.getW();
+		float w_ratio = w_diff / scanline_width;
+
+		//world pos caculation
+		Vector4 world_diff = worldpos_B - worldpos_A;
+		Vector4 worldpos_ratio = world_diff / scanline_width;
+
+		//color caculation
+		Colour color_diff = color_B - color_A;
+		Colour color_ratio = color_diff / scanline_width;
+
+		//UV caculation
+		Vector3 uv_diff = texture_B - texture_A;
+		Vector3 uv_ratio = uv_diff / scanline_width;
+
+		//normal caculation
+		Vector4 norm_diff = normal_B - normal_A;
+		Vector4 norm_ratio = norm_diff / scanline_width;
+
+		for (int j = (int)(campos_A.getX() + 0.5f); j < (int)(campos_B.getX() + 0.5f); ++j)
+		{
+			float step = (float)j - campos_A.getX() + 0.5f;
+			if (j >= m_width || j < 0) continue;
+			float z = depth_ratio * step + campos_A.getZ();
+			float w = w_ratio * step + campos_A.getW();
+			// Z test
+			if (z_line_buffer[j] > z)
+			{
+				Colour color;
+				color = (color_ratio * step + color_A);
+				color = color / w;
+
+				Vector4 normal;
+				normal = (norm_ratio * step + normal_A);
+				normal = normal / w;
+
+				Vector4 world = (worldpos_ratio * step + worldpos_A);
+				world = world / w;
+
+				Vector3 uv;
+				uv = (uv_ratio * step + texture_A);
+				uv = uv / w;
+
+				// light caculation
+				//CaculateLightColor(world, normal, uv, color);
+
+				// Z write
+				z_line_buffer[j] = z;
+				//if (TestVertexInShadow(world, normal))
+				{
+					color = color * Colour(0.3f, 0.3f, 0.3f);
+				}
+
+				m_framebuffer[j][y] = GetHEXColor(color);
+			}
+		}
+	}
+
+
+
 	void Device::ScanlineFill(const CGVertex & leftPoint, const  CGVertex & rightPoint, const int yIndex, const Colour** texture)
 	{
 		float lineWidth = rightPoint.pos.getX() - leftPoint.pos.getX();
@@ -989,7 +1073,6 @@ namespace RenderEngine {
 							Vector4DotMatrix4fInDeviceContext(resultInLigtView, lerpedPoint, m_transform->lightViewMatrix);
 							Vector4 resultInLightSpace;
 							Vector4DotMatrix4fInDeviceContext(resultInLightSpace, resultInLigtView, m_transform->orthographicProjectionMatrix);
-							//Vector4DotMatrix4fInDeviceContext(resultInLightSpace, lerpedPoint, m_transform->lightSpaceMatrix); ---> error
 							Vector4 homogenizedPos;
 							m_transform->Homogenize(homogenizedPos, resultInLightSpace);
 

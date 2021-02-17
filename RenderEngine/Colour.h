@@ -78,6 +78,14 @@ namespace RenderEngine {
 			result.b = this->b + right.b;
 			return result;
 		}
+		Colour operator -(const Colour& right)
+		{
+			Colour result;
+			result.r = this->r - right.r;
+			result.g = this->g - right.g;
+			result.b = this->b - right.b;
+			return result;
+		}
 		Colour& operator *=(const Colour& right)
 		{
 			return (*this) = (*this * right);

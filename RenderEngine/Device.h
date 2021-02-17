@@ -5,6 +5,7 @@
 #include "CGVertex.h"
 #include "ModelInfos.h"
 #include "Matrix.h"
+#include "Uniform.h"
 
 namespace RenderEngine {
 
@@ -30,6 +31,7 @@ namespace RenderEngine {
 		void ChangeInterp();
 		void ChangeCullMode();
 		void ScanlineFill(const CGVertex & left, const CGVertex & right, const int yIndex, const Colour** texture);
+		void ScanlineFill(const Uniform& A, const Uniform& B, int y);
 		void TriangleRasterization(const CGVertex& p1, const CGVertex& p2, const CGVertex& p3, const Colour** texture = NULL);
 		void DrawModel(ModelInfo& model, const float theta, const Vector3& translationDeltaOnXYZ);
 		void DrawPixel(int x, int y, unsigned int hexColor);
