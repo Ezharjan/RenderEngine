@@ -120,6 +120,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Camera.cpp" />
     <ClCompile Include="Device.cpp" />
     <ClCompile Include="GeoBasecpp.cpp" />
     <ClCompile Include="Main.cpp" />
@@ -130,6 +131,7 @@
     <ClCompile Include="Transform.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Camera.h" />
     <ClInclude Include="CGVertex.h" />
     <ClInclude Include="Colour.h" />
     <ClInclude Include="Config.h" />

@@ -60,6 +60,8 @@ namespace RenderEngine {
 		static Matrix4f getIdentityMatrix();
 		// 平移变换矩阵
 		static 	Matrix4f getTranslateMatrix(const float& x, const float& y, const float& z);
+		// 直接平移转换矩阵
+		Matrix4f makeTranslation(const Vector3& translate);
 		// 缩放变换矩阵
 		static Matrix4f getScaleMatrix(const float& x, const float& y, const float& z);
 		static Matrix4f getScaleMatrix(const Matrix4f& matrixToScale, const float scaleFactor);
