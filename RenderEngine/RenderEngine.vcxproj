@@ -126,6 +126,7 @@
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="Math.cpp" />
     <ClCompile Include="Matrix.cpp" />
+    <ClCompile Include="Texture.cpp" />
     <ClCompile Include="Vector.cpp" />
     <ClCompile Include="Window.cpp" />
     <ClCompile Include="Transform.cpp" />
@@ -145,6 +146,7 @@
     <ClInclude Include="LoadInAdvance.h" />
     <ClInclude Include="ModelInfos.h" />
     <ClInclude Include="Textcoord.h" />
+    <ClInclude Include="Texture.h" />
     <ClInclude Include="Uniform.h" />
     <ClInclude Include="Window.h" />
     <ClInclude Include="Transform.h" />

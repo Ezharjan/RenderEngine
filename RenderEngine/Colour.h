@@ -7,6 +7,8 @@ namespace RenderEngine {
 
 	struct Colour {
 		Colour() = default;
+		Colour(const float red, const float green, const float blue, const float alpha) :
+			r(red), g(green), b(blue), a(alpha) {}
 		Colour(const float red, const float green, const float blue) :
 			r(red), g(green), b(blue) {}
 		Colour(const Colour& right)
@@ -91,7 +93,7 @@ namespace RenderEngine {
 			return (*this) = (*this * right);
 		}
 
-		float r, g, b;
+		float r, g, b, a;
 	};
 
 	inline std::ostream& operator <<(std::ostream& os, const Colour& right) {
