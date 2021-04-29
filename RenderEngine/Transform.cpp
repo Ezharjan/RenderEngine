@@ -53,8 +53,6 @@ namespace RenderEngine {
 		lightTransformMatrix = m * orthographicProjectionMatrix;
 	}
 
-
-
 	void Transform::ApplyTransform(Vector4& result, const Vector4& vec)
 	{
 		result = Vector4DotMatrix4f(vec, transformMatrix);
@@ -70,6 +68,7 @@ namespace RenderEngine {
 		result = Vector4DotMatrix4f(vec, Matrix4f::getMatrixInvert(worldMatrix));
 	}
 
+	
 	Vector4 Transform::Homogenize(Vector4& result, const Vector4& vec4ToBeHomogenized)
 	{
 		if (vec4ToBeHomogenized.getW() == 0.f) {
@@ -90,7 +89,7 @@ namespace RenderEngine {
 		}
 
 		float rhw = 1.f / vec4ToBeInverted.getW();
-
+		
 		float reciprocalOfCanvasHeight = 1.f / canvasHeight;
 		float reciprocalOfCanvasWidth = 1.f / canvasWidth;
 
@@ -136,13 +135,13 @@ namespace RenderEngine {
 	void Transform::SetCamera(Vector3 & eyePos, Vector3 & lookAt, Vector3 & upAxis)
 	{
 		viewMatrix = Matrix4f::getLookAtMatrixForLeftHandCoordinate(&eyePos, &lookAt, &upAxis, upAxis);
-		//UpdateTransform();
+		UpdateTransform();
 	}
 
 	void Transform::SetLightAsCamera(Vector3 & eyePos, Vector3 & lookAt, Vector3 & upAxis)
 	{
 		lightViewMatrix = Matrix4f::getLookAtMatrixForLeftHandCoordinate(&eyePos, &lookAt, &upAxis, upAxis);
-		//UpdateTransformForShadowMap();
+		UpdateTransformForShadowMap();
 	}
 
 	void Transform::ModelToLightSpace(Vector4& result, const Vector4& vec)

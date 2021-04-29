@@ -7,10 +7,10 @@ namespace RenderEngine {
 	class BaseException : public std::exception {
 	public:
 		BaseException() : message("Error happened!") {
-			printf("%s", message.c_str());
+			printf("%s",message.c_str());
 		};
 		BaseException(const std::string& msg) : message("Error happened: " + msg) {
-			printf("%s", message.c_str());
+			printf("%s",message.c_str());
 		};
 
 		virtual ~BaseException() throw() {	};

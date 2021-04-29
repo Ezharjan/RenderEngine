@@ -21,6 +21,7 @@ namespace RenderEngine {
 		Vector2 operator -(const Vector2& right)const;
 		template<typename T>
 		Vector2 operator *(const T& right) const;
+		Vector2 operator /(const float& right) const;
 		float operator *(const Vector2& right)const;
 		bool operator ==(const float aNumbuer) {
 			return (this->getX() == aNumbuer && this->getY() && aNumbuer);
@@ -61,8 +62,6 @@ namespace RenderEngine {
 		Vector3 operator -(const Vector3& right)const;
 		Vector3 operator *(const float k)const;
 		float operator *(const Vector3& right)const;
-		Vector3 operator /(const float k)const;
-	
 		template<typename T>
 		Vector3 operator *(const T& right) const;
 		Vector3 operator ^(const Vector3& right)const; // vector cross product

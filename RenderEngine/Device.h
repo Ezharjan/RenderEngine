@@ -5,7 +5,6 @@
 #include "CGVertex.h"
 #include "ModelInfos.h"
 #include "Matrix.h"
-#include "Uniform.h"
 
 namespace RenderEngine {
 
@@ -30,8 +29,9 @@ namespace RenderEngine {
 		int GetState(int s);
 		void ChangeInterp();
 		void ChangeCullMode();
+		void RasterTriangleInAnotherWay(const CGVertex& t1, const CGVertex& t2, const CGVertex& t3);
+		void DrawScanline(const CGVertex& A, const CGVertex& B, int y);
 		void ScanlineFill(const CGVertex & left, const CGVertex & right, const int yIndex, const Colour** texture);
-		void ScanlineFill(const Uniform& A, const Uniform& B, int y);
 		void TriangleRasterization(const CGVertex& p1, const CGVertex& p2, const CGVertex& p3, const Colour** texture = NULL);
 		void DrawModel(ModelInfo& model, const float theta, const Vector3& translationDeltaOnXYZ);
 		void DrawPixel(int x, int y, unsigned int hexColor);
@@ -47,13 +47,13 @@ namespace RenderEngine {
 		void DrawBox(float theta);
 		void UpdateModelRotation(const Vector2& lastPointV2, const Vector2& curPointV2);
 		void UpdateLightSpaceMatrix(); // a way of optimization using Obsever Pattern
+		float GetBiasDynamically(const float initialBias, const Vector4 rightPointNormal, const Vector4 leftPointNormal, const float lerpFactor);
 		void UpdateLightPosition();
 		void RenderUpdate(ModelInfo& objModel);
 		void DrawPlaneForShadowShowing();
-		void DrawOriginalPos();
-		void DrawLightPositionAsABox(const Vector4 & lightPos);
 		void Close();
 
+		int** m_createdTextureHolder;
 
 		float theta;
 		float phi = 90.f; // magic number for initialized light position on sphere
@@ -67,6 +67,8 @@ namespace RenderEngine {
 
 	private:
 		void CodesForTest();
+		void Device::DrawOriginalPos();
+		void Device::DrawLightPositionAsABox(const Vector4 & lightPos);
 		void FixUV(CGVertex& v1, CGVertex& v2, CGVertex& v3);
 		void FixNormal(CGVertex& v1, CGVertex& v2, CGVertex& v3);
 
@@ -106,6 +108,29 @@ namespace RenderEngine {
 			else if (t >= 1.f) return b;
 			else return (b - a) * t + a; // optimization
 		}
+		inline Vector4 LerpInDeviceContext(const Vector4 vecA, const Vector4 vecB, const float t)
+		{
+			Vector4 result(
+				LerpInDeviceContext(vecA.getX(), vecB.getX(), t),
+				LerpInDeviceContext(vecA.getY(), vecB.getY(), t),
+				LerpInDeviceContext(vecA.getZ(), vecB.getZ(), t),
+				LerpInDeviceContext(vecA.getW(), vecB.getW(), t)
+			);
+			return result;
+		}
+		inline CGVertex LerpInDeviceContext(const CGVertex vecA, const CGVertex  vecB, const float t)
+		{
+			CGVertex result{
+				LerpInDeviceContext(vecA.pos, vecB.pos, t),
+				LerpInDeviceContext(vecA.color, vecB.color, t),
+				LerpInDeviceContext(vecA.tex.u, vecB.tex.u, t),
+				LerpInDeviceContext(vecA.tex.v, vecB.tex.v, t),
+				LerpInDeviceContext(vecA.normal, vecB.normal, t),
+				LerpInDeviceContext(vecA.rhw, vecB.rhw, t),
+				LerpInDeviceContext(vecA.posInWorldSpace, vecB.posInWorldSpace, t)
+			};
+			return result;
+		}
 		inline float CleanLerp(const float a, const float b, const float t) {
 			return (b - a) * t + a; // optimization of Lerp formula in Unity API
 		}
@@ -127,16 +152,16 @@ namespace RenderEngine {
 				result = floorf(ClampInDeviceContext(x, 0.f, 0.999999f) * 256.f);
 			return result;
 		}
-		inline Colour GetGrayValueViaGamaCorrection(const float sameRGBValue)
+		inline Colour GetGrayValueViaGamaCorrection(const float rgbValue)
 		{
-			float numerator = powf(MapTo0_255fInDeviceContext(sameRGBValue), 2.2f) + powf((1.5f*MapTo0_255fInDeviceContext(sameRGBValue)), 2.2f) + powf((0.6f*MapTo0_255fInDeviceContext(sameRGBValue)), 2.2f);
+			float numerator = powf(MapTo0_255fInDeviceContext(rgbValue), 2.2f) + powf((1.5f*MapTo0_255fInDeviceContext(rgbValue)), 2.2f) + powf((0.6f*MapTo0_255fInDeviceContext(rgbValue)), 2.2f);
 			float denominator = 1.f + powf(1.5f, 2.2f) + powf(0.6f, 2.2f);
 			float result = powf((numerator / denominator), 1.f / 2.2f);
 			return Colour(result, result, result);
 		}
-		inline Colour GetBrightnessViaGamaCorrection(const float sameRGBValue)
+		inline Colour GetBrightnessViaGamaCorrection(const float rgbValue)
 		{
-			float numerator = powf(sameRGBValue, 2.2f) + powf((1.5f*sameRGBValue), 2.2f) + powf((0.6f*sameRGBValue), 2.2f);
+			float numerator = powf(rgbValue, 2.2f) + powf((1.5f*rgbValue), 2.2f) + powf((0.6f*rgbValue), 2.2f);
 			float denominator = 1.f + powf(1.5f, 2.2f) + powf(0.6f, 2.2f);
 			float result = powf((numerator / denominator), 1.f / 2.2f);
 			return Colour(result, result, result);
@@ -167,8 +192,8 @@ namespace RenderEngine {
 
 		/// declarations are seperated from definitions
 		/// codes below are for inverttion of a position on screen to the lightScreen space
+		bool m_useInvertMethod2GetWorldPos = true;
 		Matrix4f m_invertedMatrix;
-		bool m_invertedMatrixHasGotItsValue = false;
 		Vector4 posOnScreen;
 		Vector4 invertedHomogenizedPos;
 		Vector4 posInWorldSpace;
@@ -176,6 +201,8 @@ namespace RenderEngine {
 		Vector4 lightScreenPosBeforsHomogenized;
 		Vector4 posInLightScreen;
 
-		bool gPrint = false;
+		/// other tags
+		bool m_scalePlaneForShadowShowing = false;
+		bool m_showPosInLightScreenDepth = false;
 	};
 }

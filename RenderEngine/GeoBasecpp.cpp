@@ -35,7 +35,7 @@ namespace RenderEngine {
 
 	void StringSplit(const std::string& s, const char splitchar, std::vector<std::string>& vec)
 	{
-		if (vec.size() > 0) // check the vec is empty
+		if (vec.size() > 0) // check if the vec is empty
 			vec.clear(); // otherwise, clear it
 		size_t length = s.length();
 		int start = 0;
@@ -77,46 +77,51 @@ namespace RenderEngine {
 
 	void ReadOBJFileIntoOBJModel(const std::string& path, ModelInfo * obj)
 	{
-		std::ifstream in(path);
-		int vertexIndex = 0;
-		int vertexCount = 0;
-		std::string txt = "";
-
+		std::ifstream in;
+		in.open(path, std::ifstream::in);
+		if (in.fail()) return;
 		if (in)
 		{
-			while (getline(in, txt)) // line excludes '\n' of each line
-			{
-				// vertex position
-				if (txt[0] == 'v' && txt[1] == ' ')
-				{
-					std::vector<std::string> num;
-					txt.erase(0, 2);
-					StringSplit(txt, ' ', num);
+			int vertexIndex = 0;
+			int vertexCount = 0;
+
+			std::vector<Vector4> verts;
+			std::vector<Vector3> texs;
+			std::vector<Vector4> norms;
+			std::string line;
+			float maxVx = -FLT_MAX, maxVy = -FLT_MAX, maxVz = -FLT_MAX;
+			float minVx = FLT_MAX, minVy = FLT_MAX, minVz = FLT_MAX;
+			while (!in.eof()) {
+				std::getline(in, line);
+				std::istringstream iss(line.c_str());
+				char trash;
+				if (!line.compare(0, 2, "v ")) {
+					iss >> trash;
+					float x, y, z;
+					iss >> x;
+					iss >> y;
+					iss >> z;
+					Vector4 v(x, y, z, 1.f);
 					CGVertex newVertex;
-					newVertex.pos = Vector4((float)atof(num[0].c_str()), (float)atof(num[1].c_str()), (float)atof(num[2].c_str()), 1.f);
+					newVertex.pos = v;
 					obj->vertexVec.push_back(newVertex);
 					vertexCount++;
+					maxVx = std::fmaxf(maxVx, v.getX());
+					maxVy = std::fmaxf(maxVy, v.getY());
+					maxVz = std::fmaxf(maxVz, v.getZ());
+					minVx = std::fminf(minVx, v.getX());
+					minVy = std::fminf(minVy, v.getY());
+					minVz = std::fminf(minVz, v.getZ());
 				}
-				// vertex normal
-				else if (txt[0] == 'v' && txt[1] == 'n')
-				{
-					std::vector<std::string> num;
-					txt.erase(0, 3);
-					StringSplit(txt, ' ', num);
-					obj->vertexVec[vertexIndex].normal = Vector4((float)atof(num[0].c_str()), (float)atof(num[1].c_str()), (float)atof(num[2].c_str()), 0.0);
-					vertexIndex++;
-					if (vertexIndex == vertexCount)
-					{
-						vertexIndex = 0;
-					}
-				}
-				// uv
-				else if (txt[0] == 'v' && txt[1] == 't')
-				{
-					std::vector<std::string> num;
-					txt.erase(0, 3);
-					StringSplit(txt, ' ', num);
-					obj->vertexVec[vertexIndex].tex = { (float)atof(num[0].c_str()), (float)atof(num[1].c_str()) };
+				else if (!line.compare(0, 3, "vt ")) {
+					iss >> trash;
+					iss >> trash;
+					float u, v;
+					iss >> u;
+					iss >> v;
+					if (u > 1.0f) u -= std::floor(u);
+					if (v > 1.0f) v -= std::floor(v);
+					obj->vertexVec[vertexIndex].tex = { u, v };
 					obj->vertexVec[vertexIndex].rhw = 1.0f;
 					vertexIndex++;
 					if (vertexIndex == vertexCount)
@@ -124,29 +129,53 @@ namespace RenderEngine {
 						vertexIndex = 0;
 					}
 				}
-				else if (txt[0] == 'f' && txt[1] == ' ')
-				{
-					std::vector<std::string> num;
-					txt.erase(0, 2);
-					StringSplit(txt, ' ', num);
-					std::vector<std::string> index;
-					for (int i = 0; i < num.size(); i++)
+				else if (!line.compare(0, 3, "vn ")) {
+					iss >> trash;
+					iss >> trash;
+					float x, y, z;
+					iss >> x;
+					iss >> y;
+					iss >> z;
+					obj->vertexVec[vertexIndex].normal = Vector4(x, y, z, 0.f);
+					vertexIndex++;
+					if (vertexIndex == vertexCount)
 					{
-						std::vector<std::string> threeIndex;
-						StringSplit(num[i], '/', threeIndex);
-						index.push_back(threeIndex[i]);
+						vertexIndex = 0;
 					}
-					VerticeIndex indexes = { atoi(index[0].c_str()), atoi(index[1].c_str()), atoi(index[2].c_str()) };
+				}
+				else if (!line.compare(0, 2, "f ")) {
+					std::vector<int> v;
+					std::vector<int> t;
+					std::vector<int> n;
+					int vx, vy, vz;
+					int tx, ty, tz;
+					int nx, ny, nz;
+
+					iss >> trash;
+					iss >> vx >> trash >> tx >> trash >> nx >>
+						vy >> trash >> ty >> trash >> ny >>
+						vz >> trash >> tz >> trash >> nz;
+
+					VerticeIndex indexes;
+					if (MODEL_PATH == "assets/Tonny.obj") {
+						indexes = { vx , vy, vz };
+					}
+					else
+					{
+						indexes = { vz , vy, vx };  // some obj files's vertex order is different (For Back Culling Correctly) 
+					}
 					obj->verteciesIndexVec.push_back(indexes);
 				}
 			}
+			Vector4 center = Vector4((maxVx + minVx) / 2, (maxVy + minVy) / 2, (maxVz + minVz) / 2, 1.0f);
+
+			in.close();
 		}
 		else
 		{
 			std::cout << "No such file or path named \'" << path << "\' !" << std::endl;
 		}
 	}
-
 
 	int LoadMesh(const char *file, CGVertex*& pVertexs, int& vsize, Face*& pFaces, int& fsize)
 	{
@@ -284,7 +313,6 @@ namespace RenderEngine {
 		return false;
 	}
 
-
 	Colour BilinearInterp(Colour** textureColorData, const int textureWidth, const int textureHeight, const float u, const float v)
 	{
 		//float y = u * textureHeight, x = v * textureWidth;
@@ -378,21 +406,6 @@ namespace RenderEngine {
 		v.normal.setZ(v.normal.getZ() * v.rhw);
 	}
 
-
-	void InvertVertexRHWInit(CGVertex& v)
-	{
-		if (v.rhw == 0.f || v.rhw - EPSILON == 0.f) {
-			$log("%%%%%%%%%%%%%%%%%%");
-		}
-
-		v.pos.setW(1 / v.rhw);
-
-		v.tex.u = v.pos.getW() * v.tex.u;
-		v.tex.v = v.pos.getW() * v.tex.v;
-		v.normal.setX(v.normal.getX() * v.pos.getW());
-		v.normal.setY(v.normal.getY() * v.pos.getW());
-		v.normal.setZ(v.normal.getZ() * v.pos.getW());
-	}
 
 	float GetKFactorForArcBall(const float para)
 	{

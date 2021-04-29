@@ -33,6 +33,16 @@ namespace RenderEngine {
 		return result;
 	}
 
+	Vector2 Vector2::operator /(const float& k) const
+	{
+		if (k == 0.f || abs(k - 0.f) < EPSILON) {
+			return Vector2();
+		}
+		float reciprocalK = 1 / k;
+		Vector2 result(this->getX()*reciprocalK, this->getY()*reciprocalK);
+		return result;
+	}
+
 	float Vector2::operator*(const Vector2& right) const
 	{
 		return (this->getX() * right.getX() + this->getY() * right.getY());
@@ -96,13 +106,6 @@ namespace RenderEngine {
 	float Vector3::operator*(const Vector3 & right) const
 	{
 		return (this->getX()*right.getX() + this->getY()*right.getY() + this->getZ()*right.getZ());
-	}
-
-	Vector3 Vector3::operator/(const float k) const
-	{
-		float reciprocalK = 1 / k;
-		Vector3 result(this->getX()*reciprocalK, this->getY()*reciprocalK, this->getZ() *reciprocalK);
-		return result;
 	}
 
 	template<typename T>
@@ -263,7 +266,7 @@ namespace RenderEngine {
 		this->setZ(this->getZ() / length);
 	}
 
-	Vector4 Vector4::GetNormalizedVector() const
+	Vector4 Vector4::GetNormalizedVector() const 
 	{
 		Vector4 result;
 		float length = sqrtf(powf(this->getX(), 2) + powf(this->getY(), 2) + powf(this->getZ(), 2));

@@ -120,21 +120,16 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Camera.cpp" />
     <ClCompile Include="Device.cpp" />
     <ClCompile Include="GeoBasecpp.cpp" />
     <ClCompile Include="Main.cpp" />
-    <ClCompile Include="Material.cpp" />
     <ClCompile Include="Math.cpp" />
     <ClCompile Include="Matrix.cpp" />
-    <ClCompile Include="Model.cpp" />
-    <ClCompile Include="Texture.cpp" />
     <ClCompile Include="Vector.cpp" />
     <ClCompile Include="Window.cpp" />
     <ClCompile Include="Transform.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Camera.h" />
     <ClInclude Include="CGVertex.h" />
     <ClInclude Include="Colour.h" />
     <ClInclude Include="Config.h" />
@@ -142,18 +137,12 @@
     <ClInclude Include="DebugHelper.h" />
     <ClInclude Include="Device.h" />
     <ClInclude Include="GeoBase.h" />
-    <ClInclude Include="Geometry.h" />
     <ClInclude Include="Light.h" />
-    <ClInclude Include="Material.h" />
     <ClInclude Include="Math.h" />
     <ClInclude Include="Matrix.h" />
     <ClInclude Include="LoadInAdvance.h" />
-    <ClInclude Include="Model.h" />
     <ClInclude Include="ModelInfos.h" />
-    <ClInclude Include="Scene.h" />
     <ClInclude Include="Textcoord.h" />
-    <ClInclude Include="Texture.h" />
-    <ClInclude Include="Uniform.h" />
     <ClInclude Include="Window.h" />
     <ClInclude Include="Transform.h" />
     <ClInclude Include="Vector.h" />

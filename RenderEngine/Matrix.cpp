@@ -348,16 +348,6 @@ namespace RenderEngine {
 		return translationMatrix;
 	}
 
-
-	Matrix4f Matrix4f::makeTranslation(const Vector3 & translate)
-	{
-		Matrix4f m;
-		m.matrix[3][0] = translate.getX();
-		m.matrix[3][1] = translate.getY();
-		m.matrix[3][2] = translate.getZ();
-		return *this;
-	}
-
 	Matrix4f Matrix4f::getScaleMatrix(const float& x, const float& y, const float& z)
 	{
 		Matrix4f scaleMatrix;

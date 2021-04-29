@@ -16,7 +16,7 @@ namespace RenderEngine {
 #define WINDOW_HEIGHT 576
 #endif // !WINDOW_HEIGHT
 
-	// Relevant position of window on screen
+// Relevant position of window on screen
 #ifndef AT_SCREEN_POS_X
 #define AT_SCREEN_POS_X 400
 #endif // !AT_SCREEN_POS_X
@@ -33,10 +33,16 @@ namespace RenderEngine {
 
 #ifndef MODEL_PATH 
 #define MODEL_PATH "assets/Tonny.obj"
+//#define MODEL_PATH "assets/Ball.obj"
+//#define MODEL_PATH "assets/Cerberus.obj"
+//#define MODEL_PATH "assets/Teapot.obj"
 #endif // !MODEL_PATH 
 #ifndef TEXTURE_PATH
 #define TEXTURE_PATH_4_SHADOWPLANE "assets/Ground.bmp"
+//#define TEXTURE_PATH "assets/Bricks.bmp"
+//#define TEXTURE_PATH "assets/Green.bmp"
 #define TEXTURE_PATH "assets/Tonny.bmp"
+//#define TEXTURE_PATH "assets/Cerberus.bmp"
 #endif // !TEXTURE_PATH
 
 
@@ -188,6 +194,8 @@ namespace RenderEngine {
 #define WHITE Colour(1.f, 1.f, 1.f)
 #endif
 
+
+//#define MVP_DONE_IN_ONE_TIME
 
 
 #ifndef LOOK_AT_POS_X

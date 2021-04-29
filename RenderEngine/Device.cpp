@@ -14,17 +14,15 @@
 #include "ModelInfos.h"
 
 
-#define __TEST
-
-
 namespace RenderEngine {
 
-
-	static float biasDelta = 0.0013f; // experienced bias --> 0.0013f ~ 0.0011f
+	//static float biasDelta = 0.0013f; // experienced bias --> 0.0013f ~ 0.0011f
+	static float biasDelta = 0.0005f; // get the shadow of the hand
+	static float biasDeltaStorage = 0.f; // get the shadow of the hand
 
 	static float gLightPosX = 0.f;
 	static float gLightPosY = 0.f;
-	static float gLightPosZ = 10.f;
+	static float gLightPosZ = 1.f;
 	static float gDirectionalLightIntensity = 1.f;
 
 
@@ -73,7 +71,8 @@ namespace RenderEngine {
 				if (gradientRampedBackgroundColor)
 					m_framebuffer[y][x] = (c << 16 | c << 8 | c); // ---> gradient ramp background
 				else
-					if (m_showShadowBuffer)
+					//if (m_showShadowBuffer)
+					if (m_showShadowBuffer || m_showPosInLightScreenDepth) // for light-screen-pos test 
 						m_framebuffer[y][x] = GetHEXColor(Colour(m_zbuffer[y*m_width + x], m_zbuffer[y*m_width + x], m_zbuffer[y*m_width + x]));
 					else
 						m_framebuffer[y][x] = 0;
@@ -170,6 +169,7 @@ namespace RenderEngine {
 		int y = (int)point.getY();
 		DrawPixel(x, y, color);
 	}
+
 
 	void Device::DrawPoint(const Vector4& p, const Colour& color, const Texcoord& tc, const Vector3& normal)
 	{
@@ -451,9 +451,18 @@ namespace RenderEngine {
 
 	void Device::DrawTriangle(CGVertex& v1, CGVertex& v2, CGVertex& v3, const Colour** texture)
 	{
-		// Shadow detection and caculation for drawing
-		m_invertedMatrix = Matrix4f::getMatrixInvert(m_transform->perspectiveProjectionMatrix) * Matrix4f::getMatrixInvert(m_transform->viewMatrix);
+		if (m_useInvertMethod2GetWorldPos) {
+			// Shadow detection and caculation for drawing
+			m_invertedMatrix = Matrix4f::getMatrixInvert(m_transform->perspectiveProjectionMatrix) * Matrix4f::getMatrixInvert(m_transform->viewMatrix);
+		}
 
+		Vector4 pos1AfterMVP, pos2AfterMVP, pos3AfterMVP;
+
+#ifdef MVP_DONE_IN_ONE_TIME
+		m_transform->ApplyTransform(pos1AfterMVP, v1.pos);
+		m_transform->ApplyTransform(pos2AfterMVP, v2.pos);
+		m_transform->ApplyTransform(pos3AfterMVP, v3.pos);
+#else
 
 		Vector4 pos1TransformedToWorld, pos2TransformedToWorld, pos3TransformedToWorld;
 		m_transform->ModelToWorld(pos1TransformedToWorld, v1.pos);
@@ -469,18 +478,18 @@ namespace RenderEngine {
 		Vector4DotMatrix4fInDeviceContext(pos2InView, pos2TransformedToWorld, m_transform->viewMatrix);
 		Vector4DotMatrix4fInDeviceContext(pos3InView, pos3TransformedToWorld, m_transform->viewMatrix);
 
+		Vector4DotMatrix4fInDeviceContext(pos1AfterMVP, pos1InView, m_transform->projectionMatrix);
+		Vector4DotMatrix4fInDeviceContext(pos2AfterMVP, pos2InView, m_transform->projectionMatrix);
+		Vector4DotMatrix4fInDeviceContext(pos3AfterMVP, pos3InView, m_transform->projectionMatrix);
 
-		Vector4 pos1AfterProjection, pos2AfterProjection, pos3AfterProjection;
-		Vector4DotMatrix4fInDeviceContext(pos1AfterProjection, pos1InView, m_transform->perspectiveProjectionMatrix);
-		Vector4DotMatrix4fInDeviceContext(pos2AfterProjection, pos2InView, m_transform->perspectiveProjectionMatrix);
-		Vector4DotMatrix4fInDeviceContext(pos3AfterProjection, pos3InView, m_transform->perspectiveProjectionMatrix);
+#endif
 
 		Vector4 transformedVertNormal1, transformedVertNormal2, transformedVertNormal3;
 
 		// CVV Clip here, way 2 --- Clip when three point goes out together.(Way 1 is clipping when only one point is outside)
-		if (m_transform->IsOutsideCVV(pos1AfterProjection)
-			&& m_transform->IsOutsideCVV(pos2AfterProjection)
-			&& m_transform->IsOutsideCVV(pos3AfterProjection)) return;
+		if (m_transform->IsOutsideCVV(pos1AfterMVP)
+			&& m_transform->IsOutsideCVV(pos2AfterMVP)
+			&& m_transform->IsOutsideCVV(pos3AfterMVP)) return;
 
 		m_transform->ModelToWorld(transformedVertNormal1, v1.normal);
 		m_transform->ModelToWorld(transformedVertNormal2, v2.normal);
@@ -498,9 +507,9 @@ namespace RenderEngine {
 
 		Vector4 homogenizedVertPos1, homogenizedVertPos2, homogenizedVertPos3;
 		/// Set projection transform ---> To NDC
-		m_transform->Homogenize(homogenizedVertPos1, pos1AfterProjection);
-		m_transform->Homogenize(homogenizedVertPos2, pos2AfterProjection);
-		m_transform->Homogenize(homogenizedVertPos3, pos3AfterProjection);
+		m_transform->Homogenize(homogenizedVertPos1, pos1AfterMVP);
+		m_transform->Homogenize(homogenizedVertPos2, pos2AfterMVP);
+		m_transform->Homogenize(homogenizedVertPos3, pos3AfterMVP);
 
 
 		// CULL_MODE_BACK is set to 0 and m_cullMode is in initial value --> 0
@@ -529,12 +538,11 @@ namespace RenderEngine {
 		}
 		else {
 			ScanLineTriangleRasterization(v1, v2, v3,
-				pos1AfterProjection, pos2AfterProjection, pos3AfterProjection,
+				pos1AfterMVP, pos2AfterMVP, pos3AfterMVP,
 				transformedVertNormal1, transformedVertNormal2, transformedVertNormal3,
 				homogenizedVertPos1, homogenizedVertPos2, homogenizedVertPos3, texture);
 		}
 	}
-
 
 	void Device::FixUV(CGVertex & v1, CGVertex & v2, CGVertex & v3)
 	{
@@ -596,8 +604,7 @@ namespace RenderEngine {
 		Transform::getInstance().worldMatrix = influencialMatrix;
 		Transform::getInstance().lightSpaceMatrix = influencialMatrix;
 
-		//Temp closed
-		//Transform::getInstance().UpdateTransform();
+		Transform::getInstance().UpdateTransform();
 		Transform::getInstance().UpdateTransformForShadowMap();
 
 		Vector4 vp1(-1.f, 1.f, 1.f, 1.f);
@@ -655,7 +662,7 @@ namespace RenderEngine {
 
 	void Device::UpdateLightPosition()
 	{
-		// formula of finding a point on a globe lerned in high school
+		// formula of finding a point on a globe learned in high school
 		float x = sinf(MATH_PI - phi) * cosf(MATH_PI - theta);
 		float z = sinf(MATH_PI - phi) * sinf(MATH_PI - theta);
 		float y = cosf(MATH_PI - phi);
@@ -731,6 +738,7 @@ namespace RenderEngine {
 		}
 	}
 
+
 	void Device::ScanLineTriangleRasterization(const CGVertex & v1, const CGVertex & v2, const CGVertex & v3,
 		const Vector4& transformedVertPos1, const Vector4& transformedVertPos2, const Vector4& transformedVertPos3,
 		const Vector4& transformedVertNormal1, const Vector4& transformedVertNormal2, const Vector4& transformedVertNormal3,
@@ -756,18 +764,22 @@ namespace RenderEngine {
 	void Device::DrawPlaneForShadowShowing()
 	{
 		Matrix4f translationMatrix;
-		translationMatrix = Matrix4f::getTranslateMatrix(0.f, -3.25f, 0.5f);
+		Matrix4f scaleMatrix;
 
-		Matrix4f scaleMatrix = Matrix4f::getScaleMatrix(2.1f, 2.1f, 2.3f);
+		if (m_scalePlaneForShadowShowing) {
+			translationMatrix = Matrix4f::getTranslateMatrix(0.f, -3.25f, 0.5f);
+			scaleMatrix = Matrix4f::getScaleMatrix(2.1f, 2.1f, 2.3f);
+		}
+		else {
+			translationMatrix = Matrix4f::getTranslateMatrix(0.f, -2.25f, 0.f);
+			scaleMatrix = Matrix4f::getScaleMatrix(1.f, 1.f, 1.f);
+		}
+
 
 		Transform::getInstance().worldMatrix = scaleMatrix * translationMatrix;
-
-		//Temp closed
-		//Transform::getInstance().UpdateTransform();
-
-		Transform::getInstance().lightSpaceMatrix = translationMatrix;
-		//Temp closed
-		//Transform::getInstance().UpdateTransformForShadowMap();
+		Transform::getInstance().UpdateTransform();
+		Transform::getInstance().lightSpaceMatrix = scaleMatrix * translationMatrix;
+		Transform::getInstance().UpdateTransformForShadowMap();
 
 		Vector4 vp1(-1.f, 1.f, 1.f, 1.f);
 		Colour co1(1.0f, 0.0f, 0.0f);
@@ -807,24 +819,23 @@ namespace RenderEngine {
 		Vector3 rotationAxisX(1.f, 0.f, 0.f);
 		Vector3 rotationAxisY(0.f, 1.f, 0.f);
 		Vector3 rotationAxisZ(0.f, 0.f, 1.f);
-		//* Only for making the model at the center of the scene
+
+#pragma region Making the model at the center of the scene.
 		Matrix4f mRot1 = Matrix4f::getRotationMatrix(rotationAxisX, 90.f);
 		Matrix4f mRot2 = Matrix4f::getRotationMatrix(rotationAxisZ, 180.f);
 		Matrix4f mRot3 = Matrix4f::getRotationMatrix(rotationAxisY, 180.f);
 		Matrix4f translateOBJ = Matrix4f::getTranslateMatrix(0.f, -0.77f, 1.f);
-		//*end(Only for...)
+#pragma endregion
 
 		Matrix4f scaleMatrix = Matrix4f::getScaleMatrix(gModelScaleFactor, gModelScaleFactor, gModelScaleFactor);
 
 		Matrix4f translateOBJFromOutside = Matrix4f::getTranslateMatrix(xDelta, yDelta, zDelta);
 		Transform::getInstance().worldMatrix = (scaleMatrix*mRot1*mRot2*mRot3*m_rotationFromOutsideInteraction*translateOBJ*translateOBJFromOutside);
 
-		////Temp closed!
-		//Transform::getInstance().UpdateTransform();
+		Transform::getInstance().UpdateTransform();
 
 		Transform::getInstance().lightSpaceMatrix = (mRot1*mRot2*mRot3*m_rotationFromOutsideInteraction*translateOBJ*translateOBJFromOutside);
-		////Temp closed!
-		//Transform::getInstance().UpdateTransformForShadowMap();
+		Transform::getInstance().UpdateTransformForShadowMap();
 
 
 		for (int i = 0; i < model.verteciesIndexVec.size(); i++)
@@ -848,9 +859,17 @@ namespace RenderEngine {
 		m_rotationFromOutsideInteraction = m_rotationFromOutsideInteraction * Matrix4f(currentRotation);
 	}
 
-
 	void Device::DrawTriangleForShadowMap(CGVertex & v1, CGVertex & v2, CGVertex & v3)
 	{
+		Vector4 pos1AfterMVP, pos2AfterMVP, pos3AfterMVP;
+		Vector4 transformedVertNormal1, transformedVertNormal2, transformedVertNormal3;
+
+#ifdef MVP_DONE_IN_ONE_TIME
+		m_transform->ApplyLightTransform(pos1AfterMVP, v1.pos);
+		m_transform->ApplyLightTransform(pos2AfterMVP, v2.pos);
+		m_transform->ApplyLightTransform(pos3AfterMVP, v3.pos);
+#else
+
 		Vector4 pos1TransformedToLightSpace, pos2TransformedToLightSpace, pos3TransformedToLightSpace;
 		m_transform->ModelToLightSpace(pos1TransformedToLightSpace, v1.pos);
 		m_transform->ModelToLightSpace(pos2TransformedToLightSpace, v2.pos);
@@ -861,38 +880,34 @@ namespace RenderEngine {
 		Vector4DotMatrix4fInDeviceContext(pos2InView, pos2TransformedToLightSpace, m_transform->lightViewMatrix);
 		Vector4DotMatrix4fInDeviceContext(pos3InView, pos3TransformedToLightSpace, m_transform->lightViewMatrix);
 
-		Vector4 pos1AfterProjection, pos2AfterProjection, pos3AfterProjection;
-		Vector4DotMatrix4fInDeviceContext(pos1AfterProjection, pos1InView, m_transform->orthographicProjectionMatrix);
-		Vector4DotMatrix4fInDeviceContext(pos2AfterProjection, pos2InView, m_transform->orthographicProjectionMatrix);
-		Vector4DotMatrix4fInDeviceContext(pos3AfterProjection, pos3InView, m_transform->orthographicProjectionMatrix);
+		Vector4DotMatrix4fInDeviceContext(pos1AfterMVP, pos1InView, m_transform->orthographicProjectionMatrix);
+		Vector4DotMatrix4fInDeviceContext(pos2AfterMVP, pos2InView, m_transform->orthographicProjectionMatrix);
+		Vector4DotMatrix4fInDeviceContext(pos3AfterMVP, pos3InView, m_transform->orthographicProjectionMatrix);
 
-		if (m_transform->IsOutsideCVV(pos1AfterProjection)
-			&& m_transform->IsOutsideCVV(pos2AfterProjection)
-			&& m_transform->IsOutsideCVV(pos3AfterProjection)) return;
+#endif
 
-
-		Vector4 transformedVertNormal1, transformedVertNormal2, transformedVertNormal3;
+		if (m_transform->IsOutsideCVV(pos1AfterMVP)
+			&& m_transform->IsOutsideCVV(pos2AfterMVP)
+			&& m_transform->IsOutsideCVV(pos3AfterMVP)) return;
 
 		m_transform->ModelToLightSpace(transformedVertNormal1, v1.normal);
 		m_transform->ModelToLightSpace(transformedVertNormal2, v2.normal);
 		m_transform->ModelToLightSpace(transformedVertNormal3, v3.normal);
 
-
 		Vector4 homogenizedVertPos1, homogenizedVertPos2, homogenizedVertPos3;
 
 		/// Set projection transform ---> To NDC
-		m_transform->Homogenize(homogenizedVertPos1, pos1AfterProjection);
-		m_transform->Homogenize(homogenizedVertPos2, pos2AfterProjection);
-		m_transform->Homogenize(homogenizedVertPos3, pos3AfterProjection);
+		m_transform->Homogenize(homogenizedVertPos1, pos1AfterMVP);
+		m_transform->Homogenize(homogenizedVertPos2, pos2AfterMVP);
+		m_transform->Homogenize(homogenizedVertPos3, pos3AfterMVP);
 
 		CGVertex t1 = v1, t2 = v2, t3 = v3;
 		t1.pos = homogenizedVertPos1; t2.pos = homogenizedVertPos2; t3.pos = homogenizedVertPos3;
 		t1.normal = transformedVertNormal1; t2.normal = transformedVertNormal2; t3.normal = transformedVertNormal3;
-		t1.pos.setW(pos1AfterProjection.getW());
-		t2.pos.setW(pos2AfterProjection.getW());
-		t3.pos.setW(pos3AfterProjection.getW());
+		t1.pos.setW(pos1AfterMVP.getW());
+		t2.pos.setW(pos2AfterMVP.getW());
+		t3.pos.setW(pos3AfterMVP.getW());
 
-		////Temp closed
 		// init rhw to get the correct effect
 		VertexRHWInit(t1);
 		VertexRHWInit(t2);
@@ -902,19 +917,77 @@ namespace RenderEngine {
 	}
 
 
-	void Device::ScanlineFill(const Uniform& A, const Uniform& B, int y)
+	void Device::RasterTriangleInAnotherWay(const CGVertex& t1, const CGVertex& t2, const CGVertex& t3)
 	{
-		Vector4 worldpos_A = A.worldPos;
-		Vector4 worldpos_B = B.worldPos;
+		Vector4 homogenizedPos1, homogenizedPos2, homogenizedPos3;
 
-		Vector4 campos_A = A.cameraScreenPos;
-		Vector4 campos_B = B.cameraScreenPos;
+		m_transform->Homogenize(homogenizedPos1, t1.pos);
+		m_transform->Homogenize(homogenizedPos2, t2.pos);
+		m_transform->Homogenize(homogenizedPos3, t3.pos);
+
+		// Perspective correction to be done
+	
+		float total_height = homogenizedPos3.getY() - homogenizedPos1.getY();
+		// plus 0.5 for rounding
+		for (int y = (int)(homogenizedPos1.getY() + 0.5f); y <= (int)(homogenizedPos2.getY() + 0.5f); y++)
+		{
+			// Because of up set down Y. Add a checkpoint here.
+			if (y >= m_height || y < 0) continue;
+
+			float segement_height = homogenizedPos2.getY() - homogenizedPos1.getY() + (float)EPSILON;
+			//if(segement_height < 1.0f) continue;
+			float alpha = (float)(y - homogenizedPos1.getY()) / total_height;
+			float beta = (float)(y - homogenizedPos1.getY()) / segement_height;
+			
+			CGVertex A = LerpInDeviceContext(t1, t2, alpha);
+			CGVertex B = LerpInDeviceContext(t1, t2, beta);
+
+			//draw line from left to right
+			if (A.pos.getX() > B.pos.getX())
+			{
+				std::swap(A, B);
+			}
+
+			DrawScanline(A, B, y);
+		}
+		// plus 0.5 for rounding
+		for (int y = (int)(homogenizedPos2.getY() + 0.5f); y <= (int)(homogenizedPos3.getY() + 0.5f); y++)
+		{
+			// Because of up set down Y. Add a checkpoint here.
+			if (y >= m_height || y < 0) continue;
+
+			
+			float segement_height = homogenizedPos3.getY() - homogenizedPos2.getY() + (float)EPSILON;
+			//if (segement_height < 1.0f) continue;
+			float alpha = (float)(y - homogenizedPos1.getY()) / total_height;
+			float beta = (float)(y - homogenizedPos2.getY()) / segement_height;
+			//vertex lerp
+			CGVertex A = LerpInDeviceContext(t1, t3, alpha);
+			CGVertex B = LerpInDeviceContext(t2, t3, beta);
+			//draw line from left to right
+			if (A.pos.getX() > B.pos.getX())
+			{
+				std::swap(A, B);
+			}
+
+			DrawScanline(A, B, y);
+		}
+	}
+
+
+	void Device::DrawScanline(const CGVertex& A, const CGVertex& B, int y)
+	{
+		Vector4 worldpos_A = A.posInWorldSpace;
+		Vector4 worldpos_B = B.posInWorldSpace;
+
+		Vector4 campos_A = A.pos;
+		Vector4 campos_B = B.pos;
 
 		Colour color_A = A.color;
 		Colour color_B = B.color;
 
-		Vector3 texture_A = A.texcoord;
-		Vector3 texture_B = B.texcoord;
+		Texcoord texture_A = A.tex;
+		Texcoord texture_B = B.tex;
 
 		Vector4 normal_A = A.normal;
 		Vector4 normal_B = B.normal;
@@ -923,7 +996,7 @@ namespace RenderEngine {
 		float scanline_depth = campos_B.getZ() - campos_A.getZ();
 		float scanline_width = campos_B.getX() - campos_A.getX();
 		float depth_ratio = scanline_depth / scanline_width;
-		float *z_line_buffer = &m_zbuffer[y];
+		//float z_line_buffer = m_zbuffer[y]; 
 
 		//w caculation
 		float w_diff = campos_B.getW() - campos_A.getW();
@@ -938,8 +1011,8 @@ namespace RenderEngine {
 		Colour color_ratio = color_diff / scanline_width;
 
 		//UV caculation
-		Vector3 uv_diff = texture_B - texture_A;
-		Vector3 uv_ratio = uv_diff / scanline_width;
+		Vector2 uv_diff = Vector2(texture_B.u - texture_A.u, texture_B.v - texture_A.v);
+		Vector2 uv_ratio = uv_diff / scanline_width;
 
 		//normal caculation
 		Vector4 norm_diff = normal_B - normal_A;
@@ -952,7 +1025,7 @@ namespace RenderEngine {
 			float z = depth_ratio * step + campos_A.getZ();
 			float w = w_ratio * step + campos_A.getW();
 			// Z test
-			if (z_line_buffer[j] > z)
+			if (m_zbuffer[y*m_width + j] > z)
 			{
 				Colour color;
 				color = (color_ratio * step + color_A);
@@ -965,25 +1038,28 @@ namespace RenderEngine {
 				Vector4 world = (worldpos_ratio * step + worldpos_A);
 				world = world / w;
 
-				Vector3 uv;
-				uv = (uv_ratio * step + texture_A);
-				uv = uv / w;
+				//Vector2 uv;
+				//uv = (uv_ratio * step + Vector2(texture_A.u, texture_A.v));
+				//uv = uv / w;
 
 				// light caculation
 				//CaculateLightColor(world, normal, uv, color);
 
 				// Z write
-				z_line_buffer[j] = z;
+				m_zbuffer[y*m_width + j] = z;
+
 				//if (TestVertexInShadow(world, normal))
-				{
-					color = color * Colour(0.3f, 0.3f, 0.3f);
-				}
+				//{
+				//	float shadow = scnManager->GetCurrentLight()->GetAmbient();
+				//	color = color * Color(shadow, shadow, shadow);
+				//}
+
+				//AlphaBlending(j, y, color);
 
 				m_framebuffer[j][y] = GetHEXColor(color);
 			}
 		}
 	}
-
 
 
 	void Device::ScanlineFill(const CGVertex & leftPoint, const  CGVertex & rightPoint, const int yIndex, const Colour** texture)
@@ -1004,7 +1080,7 @@ namespace RenderEngine {
 
 				if (texture == NULL || m_showShadowBuffer)
 				{// when gaining shadow map or presenting it on screen
-
+					// Perpective correction! ---> useless in orthographic mode
 					float w = 1.f / rhwTemp;
 
 					// uv interpolation to get the texture color
@@ -1034,11 +1110,12 @@ namespace RenderEngine {
 
 					if (zValue < zInBuffer)
 					{
+						// Perpective correction! ---> useless in orthographic mode
 						float w = 1.f / rhwTemp;
 
 						zInBuffer = zValue; // write into z-buffer
 
-						// uv interpolation to get the texture color
+						// uv interpolation to get the texture color (multiplies w to gain perspective correction of uv-texcture)
 						float u = LerpInDeviceContext(leftPoint.tex.u, rightPoint.tex.u, lerpFactor) * w * (textureWidth - 1);
 						float v = LerpInDeviceContext(leftPoint.tex.v, rightPoint.tex.v, lerpFactor) * w * (textureHeight - 1);
 
@@ -1061,26 +1138,42 @@ namespace RenderEngine {
 								texColor = texture[uIndex][vIndex];
 							}
 
+							if (m_useInvertMethod2GetWorldPos) {
+								posOnScreen = Vector4((float)xIndex, (float)yIndex, zValue, w);
+								invertedHomogenizedPos = m_transform->HomogenizeInvertion(invertedHomogenizedPos, posOnScreen);
+								Vector4DotMatrix4fInDeviceContext(posInWorldSpace, invertedHomogenizedPos, m_invertedMatrix);
+								if (posInWorldSpace.getW() - 1.f != EPSILON)
+									posInWorldSpace = posInWorldSpace / posInWorldSpace.getW();
+							}
+							else
+							{
+								float xHere = LerpInDeviceContext(leftPoint.posInWorldSpace.getX(), rightPoint.posInWorldSpace.getX(), lerpFactor);
+								float yHere = LerpInDeviceContext(leftPoint.posInWorldSpace.getY(), rightPoint.posInWorldSpace.getY(), lerpFactor);
+								float zHere = LerpInDeviceContext(leftPoint.posInWorldSpace.getZ(), rightPoint.posInWorldSpace.getZ(), lerpFactor);
+								posInWorldSpace = Vector4(xHere, yHere, zHere, 1.f);
+							}
 
-							//posOnScreen = Vector4((float)xIndex, (float)yIndex, zValue, w);
+							Vector4DotMatrix4fInDeviceContext(lightScreenPosBeforsHomogenized, posInWorldSpace, lightSpaceMatrix);
+							m_transform->Homogenize(posInLightScreen, lightScreenPosBeforsHomogenized);
 
-							float xHere = LerpInDeviceContext(leftPoint.posInWorldSpace.getX(), rightPoint.posInWorldSpace.getX(), lerpFactor);
-							float yHere = LerpInDeviceContext(leftPoint.posInWorldSpace.getY(), rightPoint.posInWorldSpace.getY(), lerpFactor);
-							float zHere = LerpInDeviceContext(leftPoint.posInWorldSpace.getZ(), rightPoint.posInWorldSpace.getZ(), lerpFactor);
-							float wHere = LerpInDeviceContext(leftPoint.posInWorldSpace.getW(), rightPoint.posInWorldSpace.getW(), lerpFactor);
-							Vector4 lerpedPoint(xHere, yHere, zHere, wHere);
-							Vector4 resultInLigtView;
-							Vector4DotMatrix4fInDeviceContext(resultInLigtView, lerpedPoint, m_transform->lightViewMatrix);
-							Vector4 resultInLightSpace;
-							Vector4DotMatrix4fInDeviceContext(resultInLightSpace, resultInLigtView, m_transform->orthographicProjectionMatrix);
-							Vector4 homogenizedPos;
-							m_transform->Homogenize(homogenizedPos, resultInLightSpace);
+							int hX = (int)(posInLightScreen.getX() + 0.5f);
+							int hY = (int)(posInLightScreen.getY() + 0.5f);
 
-							if (homogenizedPos.getZ() - biasDelta > depthBufferFromLightPos[(yIndex + 1.f) * m_width + (xIndex + 2.f)])
-								texColor *= Colour(0.3f, 0.3f, 0.3f);
+							float bias = GetBiasDynamically(biasDelta,rightPoint.normal, leftPoint.normal, lerpFactor);
 
+							if (hX > 0 && hY > 0 && hX < m_width && hY < m_height) {
+								if (posInLightScreen.getZ() - bias > depthBufferFromLightPos[hY * m_width + hX])
+									texColor *= Colour(0.3f, 0.3f, 0.3f);
+							}
 
-							m_framebuffer[yIndex][xIndex] = GetHEXColor(vertexColor * texColor);
+							if (m_showPosInLightScreenDepth) { // for test
+								if (posInLightScreen.getZ() < 1.f || abs(posInLightScreen.getZ()) > EPSILON) {
+									m_framebuffer[yIndex][xIndex] = GetHEXColor(GetGrayValueViaGamaCorrection(posInLightScreen.getZ()));
+								}
+							}
+							else {
+								m_framebuffer[yIndex][xIndex] = GetHEXColor(vertexColor * texColor);
+							}
 						}
 					}
 				}
@@ -1090,7 +1183,17 @@ namespace RenderEngine {
 
 	void Device::UpdateLightSpaceMatrix()
 	{
-		lightSpaceMatrix = Transform::getInstance().lightViewMatrix * Transform::getInstance().orthographicProjectionMatrix;
+		lightSpaceMatrix = m_transform->lightViewMatrix * m_transform->orthographicProjectionMatrix;
+	}
+
+	static float experiencedBias = 0.0003f;
+	float Device::GetBiasDynamically(const float initialBias, const Vector4 rightPointNormal, const  Vector4 leftPointNormal, const float lerpFactor)
+	{
+		Vector4 lightDirection(gLightPosX, gLightPosY, gLightPosZ);
+		Vector4 faceNormal = LerpInDeviceContext(rightPointNormal, leftPointNormal, lerpFactor);
+		float dotNormalLightDir = faceNormal * lightDirection;
+		float bias = max(experiencedBias * (1.f - dotNormalLightDir), initialBias); // defined max bias and min bias
+		return bias;
 	}
 
 	void Device::TriangleRasterization(const CGVertex & p1, const CGVertex & p2, const CGVertex & p3, const Colour** texture)
@@ -1185,6 +1288,7 @@ namespace RenderEngine {
 			CGVertex newMiddle;
 			newMiddle.pos.setX(middleX);
 			newMiddle.pos.setY(middle.pos.getY());
+			newMiddle.normal = middle.normal;
 			ScreenSpaceLerpCGVertex(newMiddle, top, bottom, t);
 
 			DrawBottomTriangle(top, newMiddle, middle, texture);
@@ -1199,13 +1303,9 @@ namespace RenderEngine {
 		v.tex.u = LerpInDeviceContext(v1.tex.u, v2.tex.u, t);
 		v.tex.v = LerpInDeviceContext(v1.tex.v, v2.tex.v, t);
 		v.color = LerpInDeviceContext(v1.color, v2.color, t);
-		v.pos.setZ(LerpInDeviceContext(v1.pos.getZ(), v2.pos.getZ(), t));
-		v.pos.setW(LerpInDeviceContext(v1.pos.getW(), v2.pos.getW(), t));
-
-		v.posInWorldSpace.setX(LerpInDeviceContext(v1.posInWorldSpace.getX(), v2.posInWorldSpace.getX(), t));
-		v.posInWorldSpace.setY(LerpInDeviceContext(v1.posInWorldSpace.getY(), v2.posInWorldSpace.getY(), t));
-		v.posInWorldSpace.setZ(LerpInDeviceContext(v1.posInWorldSpace.getZ(), v2.posInWorldSpace.getZ(), t));
-		v.posInWorldSpace.setW(LerpInDeviceContext(v1.posInWorldSpace.getW(), v2.posInWorldSpace.getW(), t));
+		v.pos = LerpInDeviceContext(v1.pos, v2.pos, t);
+		v.normal = LerpInDeviceContext(v1.normal, v2.normal, t); // comment this line to stay normal in world space
+		v.posInWorldSpace = LerpInDeviceContext(v1.posInWorldSpace, v2.posInWorldSpace, t);
 	}
 
 	void Device::DrawTopTriangle(const CGVertex & p1, const CGVertex & p2, const CGVertex & p3, const Colour** texture)
@@ -1281,8 +1381,13 @@ namespace RenderEngine {
 	}
 
 
+
 	void Device::RenderUpdate(ModelInfo& objModel)
 	{
+		enum CameraLookingDirection {
+			FrontBack, TopDown, BackFront, DownTop
+		};
+		static CameraLookingDirection gCameraLookingFrom = CameraLookingDirection::FrontBack;
 
 #if _DEBUG
 		CodesForTest();
@@ -1291,9 +1396,6 @@ namespace RenderEngine {
 
 		float movOnX = 0.f; // CAMERA_POS_X;
 		float movOnY = 0.f; // CAMERA_POS_Y;
-		float lookX = LOOK_AT_POS_X;
-		float lookY = LOOK_AT_POS_Y;
-		float lookZ = LOOK_AT_POS_Z;
 		float rotationAngleInDegree = 1.f;
 		float lightRotation = 1.f;
 
@@ -1316,7 +1418,23 @@ namespace RenderEngine {
 			Window::getInstance().Dispatch();
 
 			if (!m_showShadowBuffer) {
-				Transform::getInstance().SetCamera(cameraPos, lookAtForCamera, cameraUpAxis);
+				switch (gCameraLookingFrom) {
+				case CameraLookingDirection::FrontBack:
+					Transform::getInstance().SetCamera(cameraPos, lookAtForCamera, cameraUpAxis);
+					break;
+				case CameraLookingDirection::TopDown:
+					Transform::getInstance().SetCamera(Vector3(0.f, gDistanceFactor, 0.f), lookAtForLight, Vector3(0.f, 0.f, 1.f));
+					break;
+				case CameraLookingDirection::BackFront:
+					Transform::getInstance().SetCamera(Vector3(0.f, 0.f, -gDistanceFactor), lookAtForLight, Vector3(0.f, 1.f, 0.f));
+					break;
+				case CameraLookingDirection::DownTop:
+					Transform::getInstance().SetCamera(Vector3(0.f, -gDistanceFactor, 0.f), lookAtForLight, Vector3(0.f, 0.f, 1.f));
+					break;
+				default:
+					break;
+				}
+
 				Transform::getInstance().SetLightAsCamera(Vector3(gLightPosX, gLightPosY, gLightPosZ), lookAtForLight, cameraUpAxis);
 				Transform::getInstance().SetLightAsCamera(Vector3(gLightPosX, gLightPosY, gLightPosZ), lookAtForLight, cameraUpAxis);
 			}
@@ -1328,7 +1446,7 @@ namespace RenderEngine {
 			// Translate the molde right
 			if (Window::getInstance().IsKeyPressed(VK_A))
 			{
-				if (translateX <= 27) // magic number
+				if (translateX <= 27) // limit:27 is magic number
 				{
 					translateX += 0.1f;
 					translationForModel = Vector3(translateX, translateY, translateZ);
@@ -1338,7 +1456,7 @@ namespace RenderEngine {
 			// Translate the molde left
 			if (Window::getInstance().IsKeyPressed(VK_D))
 			{
-				if (translateX >= -27) // magic number
+				if (translateX >= -27) // limit:-27 is magic number
 				{
 					translateX -= 0.1f;
 					translationForModel = Vector3(translateX, translateY, translateZ);
@@ -1348,7 +1466,7 @@ namespace RenderEngine {
 			// Translate the molde going far away from the user
 			if (Window::getInstance().IsKeyPressed(VK_W))
 			{
-				if (translateZ >= -7) // magic number
+				if (translateZ >= -7) // limit:-7 is magic number
 				{
 					translateZ -= 0.1f;
 					translationForModel = Vector3(translateX, translateY, translateZ);
@@ -1358,20 +1476,17 @@ namespace RenderEngine {
 			// Translate the molde going near to the user
 			if (Window::getInstance().IsKeyPressed(VK_S))
 			{
-				if (translateZ <= 7) // magic number
+				if (translateZ <= 7) // limit:7 is magic number
 				{
 					translateZ += 0.1f;
 					translationForModel = Vector3(translateX, translateY, translateZ);
 				}
 			}
-			if (Window::getInstance().IsKeyPressed(VK_DOWN)) {
-				lookY += 0.5f;
-			}
 
 			// Translate the molde up
 			if (Window::getInstance().IsKeyPressed(VK_UP))
 			{
-				if (translateY <= 7) // magic number
+				if (translateY <= 7) // limit:7 is magic number
 				{
 					translateY += 0.1f;
 					translationForModel = Vector3(translateX, translateY, translateZ);
@@ -1381,7 +1496,7 @@ namespace RenderEngine {
 			// Translate the molde down
 			if (Window::getInstance().IsKeyPressed(VK_DOWN))
 			{
-				if (translateY >= -13) // magic number
+				if (translateY >= -13) // limit:-13 is magic number
 				{
 					translateY -= 0.1f;
 					translationForModel = Vector3(translateX, translateY, translateZ);
@@ -1391,48 +1506,46 @@ namespace RenderEngine {
 			{
 				// move camera on X axis
 				movOnX -= 0.05f;
-
-				// scale model via scale matrix
-				//if (gModelScaleFactor >= 0.15f) gModelScaleFactor -= 0.05f;
 			}
 			if (Window::getInstance().IsKeyPressed(VK_LEFT))
 			{
 				// move camera on X axis
 				movOnX += 0.05f;
-
-				// scale model via scale matrix
-				//if (gModelScaleFactor <= 1.90f) gModelScaleFactor += 0.05f;
 			}
 
-			// Reset the model to position O'
+			// Reset the model to position O
 			if (Window::getInstance().GetKeyUpEvent(VK_SPACE))
 			{
 				translationForModel = Vector3(0.f, 0.f, 0.f);
-				//Device::getInstance().ChangeState();
 			}
 
 
 			///////////////////////////Instructions of interaction./////////////////////////////
 			/*
-			 * Space: Make the transform of the model to its initial place, rotation excluded.
-			 * O:     Lower the light intensity;
-			 * P:     Raise the light intensity;
-			 * J:     Change the cull mode of the model rendering;
-			 * K:     Change ineterpolation mode while drawing triangles with Half Space Rasterization Merthod;
-			 * L:     Turn on/off the directional light;
-			 * Y:     Turn on/off the rendering from the light position;
-			 * Q:	  Render in perspective mode or in orthographic mode;
-			 * R:	  Change the background color ramping mode;
-			 * H:	  Raise the value of biasDelta;
-			 * G:	  Lower the value of biasDelta;
+			 * Space:	  Make the transform of the model to its initial place, rotation excluded.
+			 * O:		  Lower the light intensity;
+			 * P:		  Raise the light intensity;
+			 * J:		  Change the cull mode of the model rendering;
+			 * K:		  Change ineterpolation mode while drawing triangles with Half Space Rasterization Merthod;
+			 * L:		  Turn on/off the directional light;
+			 * Y:		  Turn on/off the rendering from the light position;
+			 * Q:		  Render in perspective mode or in orthographic mode;
+			 * R:		  Change the background color ramping mode;
+			 * H:		  Raise the value of biasDelta;
+			 * G:		  Lower the value of biasDelta;
+			 * M:		  Scale the plane for shadow showing;
+			 * V:		  Use invert-matrix-method to get the world position for shadowing;
+			 * F:		  Show position in light screen depth;
+			 * NUMPAD2:	  Scale the model to smaller;
+			 * NUMPAD8:	  Scale the model to bigger;
+			 * NUMPAD7:	  Camera looking from top to down;
+			 * NUMPAD4:	  Camera looking from down to top;
+			 * NUMPAD0:	  Camera looking from front to back;
+			 * NUMPAD9:	  Camera looking from back to front;
+			 * NUMPAD_ADD:		  Change the bias delta to NO-SELF-SHADOW mode;
+			 * NUMPAD_SUBTRACT:	  Restore the bias delta to original value;
 			 */
 
-			 // Test
-			 //if (Window::getInstance().IsKeyPressed(VK_F7)) {
-			 //	gPrint = true;
-			 //}
-			if (Window::getInstance().GetKeyUpEvent(VK_F7))
-				gPrint = true;
 			if (Window::getInstance().GetKeyUpEvent(VK_F1))
 				SetState(4);
 			if (Window::getInstance().GetKeyUpEvent(VK_F2))
@@ -1478,14 +1591,72 @@ namespace RenderEngine {
 				$log(biasDelta);
 			}
 
+			
+			if (Window::getInstance().GetKeyUpEvent(VK_M))
+			{
+				m_scalePlaneForShadowShowing = !m_scalePlaneForShadowShowing;
+				m_scalePlaneForShadowShowing ?
+					std::cout << "plane for shadowing is scaled big!" << std::endl : std::cout << "plane for shadowing is scaled small!" << std::endl;
+			}
+			if (Window::getInstance().GetKeyUpEvent(VK_V))
+			{
+				m_useInvertMethod2GetWorldPos = !m_useInvertMethod2GetWorldPos;
+				m_useInvertMethod2GetWorldPos ?
+					std::cout << "using invert-matrix-method to get world position!" << std::endl : std::cout << "using vertex-property to get world position!" << std::endl;
+			}
+			if (Window::getInstance().GetKeyUpEvent(VK_F))
+			{
+				m_showPosInLightScreenDepth = !m_showPosInLightScreenDepth;
+			}
+			if (Window::getInstance().IsKeyPressed(VK_NUMPAD2))
+			{
+				// scale model via scale matrix
+				if (gModelScaleFactor >= 0.15f) gModelScaleFactor -= 0.05f;
+			}
+			if (Window::getInstance().IsKeyPressed(VK_NUMPAD8))
+			{
+				// scale model via scale matrix
+				if (gModelScaleFactor <= 1.90f) gModelScaleFactor += 0.05f;
+			}
+			if (Window::getInstance().IsKeyPressed(VK_NUMPAD9))
+			{
+				gCameraLookingFrom = CameraLookingDirection::BackFront;
+			}
+			if (Window::getInstance().IsKeyPressed(VK_NUMPAD0))
+			{
+				gCameraLookingFrom = CameraLookingDirection::FrontBack;
+			}
+			if (Window::getInstance().IsKeyPressed(VK_NUMPAD7))
+			{
+				gCameraLookingFrom = CameraLookingDirection::TopDown;
+			}
+			if (Window::getInstance().IsKeyPressed(VK_NUMPAD4))
+			{
+				gCameraLookingFrom = CameraLookingDirection::DownTop;
+			}
+			if (Window::getInstance().GetKeyUpEvent(VK_ADD))
+			{
+				if (biasDelta != 0.0013f) {
+					$log("Bias delta has been changed! BiasDelta:" << biasDelta);
+					biasDeltaStorage = biasDelta;
+					biasDelta = 0.0013f;
+				}
+			}
+			if (Window::getInstance().GetKeyUpEvent(VK_SUBTRACT))
+			{
+				if (biasDeltaStorage != 0.f && biasDelta == 0.0013f) {
+					$log("Bias delta has been restored! BiasDelta:" << biasDelta);
+					biasDelta = biasDeltaStorage;
+				}
+			}
 
 			int s = GetState(m_state);
 			if (s & DRAW_MODEL)
 			{
 				DrawModel(objModel, rotationAngleInDegree, translationForModel);
 				DrawPlaneForShadowShowing();
-				DrawOriginalPos();
-				DrawLightPositionAsABox(Vector3(gLightPosX, gLightPosY, gLightPosZ));
+				//DrawOriginalPos();
+				//DrawLightPositionAsABox(Vector3(gLightPosX, gLightPosY, gLightPosZ));
 			}
 			else
 			{
@@ -1501,15 +1672,12 @@ namespace RenderEngine {
 	}
 
 
-	void Device::CodesForTest()
-	{
-		// Place here test your codes
-	}
+	void Device::CodesForTest() { }
 
 	void Device::DrawOriginalPos()
 	{
 		Matrix4f translationMatrix;
-		translationMatrix = Matrix4f::getTranslateMatrix(0.f, 0.f, 0.f);
+		translationMatrix = Matrix4f::getTranslateMatrix(2.3f, 1.f, 0.f);
 		Matrix4f scaleMatrix = Matrix4f::getScaleMatrix(0.1f, 0.1f, 0.1f);
 		Matrix4f influencialMatrix = scaleMatrix * translationMatrix;
 
@@ -1574,8 +1742,7 @@ namespace RenderEngine {
 	{
 		Vector4 normalizedLightPosition = lightPos.GetNormalizedVector();
 		Matrix4f translationMatrix;
-		//translationMatrix = Matrix4f::getTranslateMatrix(normalizedLightPosition.getX(), normalizedLightPosition.getY(), normalizedLightPosition.getZ());
-		translationMatrix = Matrix4f::getTranslateMatrix(lightPos.getX(), lightPos.getY(), lightPos.getZ());
+		translationMatrix = Matrix4f::getTranslateMatrix(lightPos.getX() + 2.3f, lightPos.getY() + 1.f, lightPos.getZ());
 		Matrix4f scaleMatrix = Matrix4f::getScaleMatrix(0.1f, 0.1f, 0.1f);
 		Matrix4f influencialMatrix = scaleMatrix * translationMatrix;
 
