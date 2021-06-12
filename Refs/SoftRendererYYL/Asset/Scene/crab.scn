@@ -1,0 +1,28 @@
+#wireframe color texture
+mode: texture
+
+#on off
+backcull: off
+
+#on off
+shadow: off
+
+lighting:
+    tpye: point
+    position: -5.0 5.0 5.0
+    color: 1.0 1.0 1.0
+
+#lighting:
+#    tpye: driect
+#    direction: 5.0 -5.0 0
+#    color: 1.0 1.0 1.0
+
+models: 1
+    model:
+        mesh: Tonny.obj
+		normal: Tonny.bmp
+        diffuse: crab_diffuse.bmp
+		specular: Tonny.bmp
+        castshadow: true
+        receiveshadow: true
+		transparent: false
