@@ -1,0 +1,162 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="源文件">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="头文件">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="资源文件">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="api.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="blinn_scenes.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="blinn_shader.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="cache_helper.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="camera.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="darray.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="draw2d.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="graphics.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="image.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="macro.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="maths.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="mesh.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="pbr_scenes.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="pbr_shader.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="platform.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="private.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="scene.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="scene_helper.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="skeleton.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="skybox_shader.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="test_blinn.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="test_helper.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="test_pbr.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="texture.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="blinn_scenes.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="blinn_shader.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="cache_helper.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="camera.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="darray.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="draw2d.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="graphics.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="image.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="main.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="maths.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="mesh.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="pbr_scenes.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="pbr_shader.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="private.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="scene.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="scene_helper.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="skeleton.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="skybox_shader.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="test_blinn.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="test_helper.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="test_pbr.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="texture.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="win32.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>
