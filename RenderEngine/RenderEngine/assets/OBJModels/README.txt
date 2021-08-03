@@ -1,0 +1,2 @@
+The files in this folder is mainly for avoiding the ignora from git-ignore file. 
+Please remove the last '-', be sure to plce them in the 'assets' folder outside this folder and make it to original obj file when running the projec.
